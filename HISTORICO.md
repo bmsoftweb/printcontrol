@@ -1,5 +1,9 @@
 # Histórico de versões — PrintControl Web
 
+## 0.0.3 — 05/10/2026
+- Banco mais rápido: índices novos (database/migrations/005_indices.sql) para a última leitura do contador, o pré-faturamento, o histórico SNMP e as listas por grupo/empresa.
+- Histórico SNMP ("Todas") reescrito para usar o índice por data: de ~130 ms para ~4 ms.
+
 ## 0.0.2 — 05/10/2026 (primeira versão publicada)
 - Conversão completa do PrintControl Delphi (UniGUI) para a stack do crmweb (Express + Vite + React + Tailwind + MySQL), sobre a mesma estrutura de banco do Delphi.
 - Login com Servidor (printcontrol_admin.servidores), usuário interno ou código do cliente, escolha da empresa, níveis de acesso do Delphi.

@@ -319,10 +319,11 @@ export function createLocacoesRouter() {
     rota(async (req, _res, ctx) => {
       const serie = String(req.query.nr_serie ?? '').trim();
       // ponytail: "Todas" traz as 2.000 mais recentes; paginar se a tabela crescer muito
+      // Todas: o hint percorre o índice por data (migration 005); sem o índice o MySQL só ignora o hint
       const [rows] = await pool.query<any[]>(
         `SELECT * FROM (
-           SELECT * FROM equipamentos_leituras
-            WHERE ${serie ? 'equip_ns = ?' : 'equip_ns IN (SELECT nr_serie FROM equipamentos WHERE id_grupo = ?)'}
+           SELECT ${serie ? '' : '/*+ INDEX(L idx_eqleit_inclusao) */ '}L.* FROM equipamentos_leituras L
+            WHERE ${serie ? 'L.equip_ns = ?' : 'EXISTS (SELECT 1 FROM equipamentos E WHERE E.nr_serie = L.equip_ns AND E.id_grupo = ?)'}
             ORDER BY datahora_inclusao DESC, id DESC LIMIT 2000) X
           ORDER BY datahora_inclusao, id`,
         [serie || ctx.grupoId],

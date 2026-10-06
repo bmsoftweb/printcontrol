@@ -32,6 +32,7 @@ Mudanças de estrutura sugeridas ficam em `database/migrations/` e são rodadas 
 | `002_consulta_contratos_duplicados.sql` | Reescreve a consulta "Contratos Duplicados" sem tabela temporária (a web só executa SELECT/WITH nas Consultas) |
 | `003_nfe_xml.sql` | XML da NF-e em MEDIUMTEXT e descrição do evento com 255 caracteres |
 | `004_nivel_tecnico.sql` | Nível T (técnico) em `usuarios_niveis` |
+| `005_indices.sql` | Índices para as consultas mais usadas (última leitura, pré-faturamento, leituras SNMP, listas por grupo/empresa) |
 
 Desenvolvimento: servidor 1 (`printcontrol_xdemo`, seed `database/seed_desenvolvimento.sql`). Dados reais: servidor 2 (`printcontrol_000001`, cópia do banco do Delphi).
 

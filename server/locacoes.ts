@@ -7,6 +7,7 @@ import {
   acertarGrupo,
   calcularLeitura,
   contadoresALancar,
+  contadoresDaColeta,
   derivarValoresContrato,
   recalcularLeitura,
   totalizarGrupo,
@@ -14,6 +15,9 @@ import {
   vencimentoEsperado,
   vencimentoLeitura,
 } from '../src/modulos/locacoes/calculos.js';
+
+/** Banco do Scan Impressoras SNMP (tabelas impressora e leitura), no mesmo host do banco de trabalho */
+const PRINTERS_DB = /^\w+$/.test(process.env.PRINTERS_DATABASE || '') ? process.env.PRINTERS_DATABASE! : 'printers_000000';
 
 /** Conexão ou pool: as consultas servem dentro e fora de transação */
 type Q = { query: typeof pool.query };
@@ -313,22 +317,55 @@ export function createLocacoesRouter() {
     }),
   );
 
-  /** Histórico SNMP (equipamentos_leituras) do nr. de série; sem série = todas dos equipamentos do grupo */
+  /** Histórico SNMP (coletas do Scan Impressoras em PRINTERS_DB) do nr. de série; sem série = todas dos equipamentos do grupo */
   router.get(
     '/locacoes/snmp',
     rota(async (req, _res, ctx) => {
       const serie = String(req.query.nr_serie ?? '').trim();
-      // ponytail: "Todas" traz as 2.000 mais recentes; paginar se a tabela crescer muito
-      // Todas: o hint percorre o índice por data (migration 005); sem o índice o MySQL só ignora o hint
+      // Coletas do Scan Impressoras (PRINTERS_DB). ponytail: "Todas" traz as 2.000 mais recentes; paginar se crescer muito
       const [rows] = await pool.query<any[]>(
         `SELECT * FROM (
-           SELECT ${serie ? '' : '/*+ INDEX(L idx_eqleit_inclusao) */ '}L.* FROM equipamentos_leituras L
-            WHERE ${serie ? 'L.equip_ns = ?' : 'EXISTS (SELECT 1 FROM equipamentos E WHERE E.nr_serie = L.equip_ns AND E.id_grupo = ?)'}
-            ORDER BY datahora_inclusao DESC, id DESC LIMIT 2000) X
-          ORDER BY datahora_inclusao, id`,
+           SELECT L.id, L.coletado_em, L.ip, L.paginas, L.paginas_preto, L.paginas_color, L.paginas_unidade,
+                  L.toner_preto, L.toner_ciano, L.toner_magenta, L.toner_amarelo,
+                  I.numero_serie, I.fabricante, I.modelo, I.colorida, COALESCE(I.apelido, I.localizacao) AS local_impressora
+             FROM \`${PRINTERS_DB}\`.leitura L
+             JOIN \`${PRINTERS_DB}\`.impressora I ON I.id = L.impressora_id
+            WHERE ${serie ? 'I.numero_serie = ?' : 'EXISTS (SELECT 1 FROM equipamentos E WHERE E.nr_serie = I.numero_serie AND E.id_grupo = ?)'}
+            ORDER BY L.coletado_em DESC, L.id DESC LIMIT 2000) X
+          ORDER BY coletado_em, id`,
         [serie || ctx.grupoId],
       );
-      return rows;
+      // Cliente e setor do contrato ativo da série (do grupo/empresa), para a mesma grade de antes
+      const series = [...new Set(rows.map((r) => r.numero_serie).filter(Boolean))];
+      const [contratos] = series.length
+        ? await pool.query<any[]>(
+            `SELECT C.nr_serie, C.setor, P.nome FROM locacao_contratos C LEFT JOIN pessoas P ON P.id = C.id_cliente
+              WHERE C.nr_serie IN (?) AND ${ESCOPO_C} ORDER BY C.ativo = 'S', C.id`,
+            [series, ...escopo(ctx)],
+          )
+        : [[]];
+      const contrato = new Map((contratos as any[]).map((c) => [c.nr_serie, c]));
+      return rows.map((r) => {
+        const { pb, cor } = contadoresDaColeta(r);
+        const c = contrato.get(r.numero_serie);
+        return {
+          id: r.id,
+          datahora_inclusao: r.coletado_em,
+          equip_ns: r.numero_serie,
+          equip_marca: r.fabricante,
+          equip_modelo: r.modelo,
+          cliente_descricao_equip: c?.setor || r.local_impressora,
+          cliente_nome: c?.nome ?? null,
+          leitura_pb: pb,
+          leitura_color: cor,
+          nivel_toner_black: r.toner_preto,
+          nivel_toner_cyan: r.toner_ciano,
+          nivel_toner_magenta: r.toner_magenta,
+          nivel_toner_yellow: r.toner_amarelo,
+          cliente_ip_equip: r.ip,
+          unidade: r.paginas_unidade,
+        };
+      });
     }),
   );
 
@@ -524,28 +561,36 @@ export function createLocacoesRouter() {
     }),
   );
 
-  /** Captura da coleta SNMP (equipamentos_leituras) para uma linha da pré-leitura */
+  /**
+   * Captura para uma linha da pré-leitura: última coleta do Scan Impressoras SNMP (banco PRINTERS_DATABASE, padrão
+   * printers_000000, no mesmo host do banco de trabalho) até o fim do dia da leitura, pelo nr. de série.
+   */
   const capturar = async (conn: Q, ctx: Contexto, item: any) => {
-    const [els] = await conn.query<any[]>(
-      'SELECT * FROM equipamentos_leituras WHERE equip_ns = ? AND data_leitura <= ? ORDER BY datahora_inclusao DESC, id DESC LIMIT 1',
-      [item.nr_serie ?? '', item.data_leitura ?? hojeLocal()],
+    const [coletas] = await conn.query<any[]>(
+      `SELECT L.id, L.coletado_em, L.paginas, L.paginas_preto, L.paginas_color, I.colorida
+         FROM \`${PRINTERS_DB}\`.leitura L
+         JOIN \`${PRINTERS_DB}\`.impressora I ON I.id = L.impressora_id
+        WHERE I.numero_serie = ? AND L.coletado_em < DATE_ADD(?, INTERVAL 1 DAY)
+        ORDER BY L.coletado_em DESC, L.id DESC LIMIT 1`,
+      [String(item.nr_serie ?? '').trim(), item.data_leitura ?? hojeLocal()],
     );
-    const el = els[0];
-    if (!el) {
+    const c = coletas[0];
+    if (!c) {
       await atualizar(conn, 'locacao_pre_leituras_leituras', item.id, { status: 'Z' });
       return false;
     }
-    const anterior = async (qtd: unknown, color: string) => (Number(qtd) > 0 ? Number((await ultimaLeitura(conn, ctx, el.equip_ns, color))?.leitura_atual ?? 0) : 0);
+    const { pb, cor } = contadoresDaColeta(c);
+    const anterior = async (qtd: number, color: string) => (qtd > 0 ? Number((await ultimaLeitura(conn, ctx, item.nr_serie, color))?.leitura_atual ?? 0) : 0);
     await atualizar(conn, 'locacao_pre_leituras_leituras', item.id, {
-      leitura_pb: el.leitura_pb,
-      leitura_color: el.leitura_color,
-      leitura_pb_anterior: await anterior(el.leitura_pb, 'N'),
-      leitura_color_anterior: await anterior(el.leitura_color, 'S'),
-      id_equipamentos_leituras: el.id,
-      datahora_leitura_auto: el.datahora_inclusao,
+      leitura_pb: pb,
+      leitura_color: cor,
+      leitura_pb_anterior: await anterior(pb, 'N'),
+      leitura_color_anterior: await anterior(cor, 'S'),
+      // A coluna aponta para equipamentos_leituras: a coleta do printers não tem registro lá
+      id_equipamentos_leituras: null,
+      datahora_leitura_auto: c.coletado_em,
       status: 'C',
     });
-    await conn.query("UPDATE equipamentos_leituras SET lancado = 'S' WHERE equip_ns = ? AND id <= ?", [el.equip_ns, el.id]);
     return true;
   };
 

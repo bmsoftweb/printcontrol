@@ -117,7 +117,7 @@ export const Devolucao: React.FC<{ venda: Linha; onFechar: () => void; onGravado
       </div>
       <div className="h-[60vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
         {dados ? (
-          <Grade colunas={colunas} linhas={dados.linhas} chave="id_vendas_produtos" selecionado={sel} onSelecionar={(r) => setSel(r.id_vendas_produtos)} agrupar={{ campo: 'grupo' }} vazio="Nenhuma venda finalizada deste cliente." />
+          <Grade nome="vendas.devolucao" colunas={colunas} linhas={dados.linhas} chave="id_vendas_produtos" selecionado={sel} onSelecionar={(r) => setSel(r.id_vendas_produtos)} agrupar={{ campo: 'grupo' }} vazio="Nenhuma venda finalizada deste cliente." />
         ) : (
           !erro && <Carregando />
         )}
@@ -277,6 +277,7 @@ export const CapturaPedidos: React.FC<{ venda: Linha; onFechar: () => void; onGr
       <div className="h-[58vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
         {dados ? (
           <Grade
+            nome="vendas.pedidos"
             colunas={colunas}
             linhas={linhas}
             chave="id_vendas_produtos"

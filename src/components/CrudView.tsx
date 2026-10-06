@@ -292,8 +292,10 @@ export const CrudView: React.FC<CrudViewProps> = ({
       grade,
       sobra: comSobra,
       modo: modoLargura,
-    });
-    onToast('Configuração salva.');
+    }).then(
+      () => onToast('Configuração salva.'),
+      (e) => onToast(e.message || 'Não foi possível salvar a configuração.'),
+    );
   };
 
   const tabelaRef = useRef<HTMLTableElement>(null);

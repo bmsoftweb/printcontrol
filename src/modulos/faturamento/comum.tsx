@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { GradeLista, type ColunaLista } from '../../components/GradeLista';
 import { lerSessao } from '../../utils/session';
 import { formatDateBR, formatDateTimeBR } from '../../utils/formatters';
 
@@ -37,14 +38,21 @@ export const Selo: React.FC<{ cor: string; texto: string; escuro?: boolean }> = 
   </span>
 );
 
-export const SeloStatusNota: React.FC<{ status: string; atraso?: number }> = ({ status, atraso = 0 }) =>
-  status === 'R' ? (
-    <Selo cor="#E5E5E5" texto="RECEBIDO" escuro />
-  ) : status === 'C' ? (
-    <Selo cor="#DC143C" texto="CANCELADO" />
-  ) : (
-    <Selo cor={atraso > 7 ? '#FF6347' : atraso > 0 ? '#FFD700' : '#2E8B57'} texto="A RECEBER" escuro={atraso > 0 && atraso <= 7} />
-  );
+/** Dias de atraso de um vencimento (aaaa-mm-dd) em relação a hoje no horário de Brasília; 0 se em dia */
+export function diasAtraso(vencimento: unknown): number {
+  const v = String(vencimento ?? '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return 0;
+  const hoje = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  return Math.max(0, Math.round((Date.parse(hoje) - Date.parse(v)) / 86_400_000));
+}
+
+/** Status da nota: âmbar a receber, vermelho vencida, verde recebida, cinza cancelada */
+export const SeloStatusNota: React.FC<{ status: string; atraso?: number; vencimento?: unknown }> = ({ status, atraso, vencimento }) => {
+  if (status === 'R') return <Selo cor="#2E8B57" texto="RECEBIDO" />;
+  if (status === 'C') return <Selo cor="#9CA3AF" texto="CANCELADO" />;
+  const dias = atraso ?? diasAtraso(vencimento);
+  return dias > 0 ? <Selo cor="#DC2626" texto={`VENCIDA ${dias}d`} /> : <Selo cor="#F59E0B" texto="A RECEBER" escuro />;
+};
 
 const token = () => lerSessao()?.token ?? '';
 
@@ -85,9 +93,11 @@ export async function baixarPost(url: string, corpo: unknown, nomePadrao: string
 export interface Coluna {
   chave: string;
   titulo: React.ReactNode;
+  /** Nome no menu Colunas quando o título é vazio ou não é texto */
+  rotulo?: string;
   alinhar?: 'dir' | 'centro';
-  /** Classe de largura mínima (ex.: min-w-[90px]) */
-  largura?: string;
+  /** Largura inicial (px) */
+  largura?: number;
   render?: (r: Reg) => React.ReactNode;
   /** Conteúdo do rodapé (soma) */
   rodape?: React.ReactNode;
@@ -95,16 +105,24 @@ export interface Coluna {
   grupo?: string;
   /** Clique no título (ordenação) */
   aoClicarTitulo?: () => void;
+  ordenada?: 'asc' | 'desc' | null;
   /** Classe extra da célula conforme a linha */
   classe?: (r: Reg) => string;
+  /** Fora da grade por padrão (o usuário liga no menu Colunas) */
+  oculta?: boolean;
+  /** Presa à esquerda ao rolar (a GradeLista só prende a primeira coluna visível) */
+  fixa?: boolean;
 }
 
 interface GradeProps {
+  /** Chave da configuração da grade em usuarios.config_listas (ex.: 'faturamento.notas') */
+  nome: string;
   colunas: Coluna[];
   linhas: Reg[];
   chave?: string;
   selecionado?: unknown;
   onSelecionar?: (r: Reg) => void;
+  /** Duplo clique: recebe também a coluna clicada */
   onDuploClique?: (r: Reg, coluna: string) => void;
   carregando?: boolean;
   vazio?: string;
@@ -112,99 +130,40 @@ interface GradeProps {
   riscada?: (r: Reg) => boolean;
   /** Coluna Ações fixa à direita */
   acoes?: (r: Reg) => React.ReactNode;
+  onToast?: (msg: string) => void;
 }
 
-const ALINHAR = { dir: 'text-right', centro: 'text-center' } as const;
-
-/** Grade simples das telas do módulo: cabeçalho fixo, linha selecionada, rodapé com somas */
-export const Grade: React.FC<GradeProps> = ({ colunas, linhas, chave = 'id', selecionado, onSelecionar, onDuploClique, carregando, vazio = 'Nenhum registro.', riscada, acoes }) => {
-  const temRodape = colunas.some((c) => c.rodape !== undefined);
-  const grupos = colunas.some((c) => c.grupo)
-    ? colunas.reduce<{ titulo: string; n: number }[]>((acc, c) => {
-        const t = c.grupo ?? '';
-        if (acc.length && acc[acc.length - 1].titulo === t) acc[acc.length - 1].n++;
-        else acc.push({ titulo: t, n: 1 });
-        return acc;
-      }, [])
-    : null;
-  const th = 'px-2.5 py-2 font-semibold text-stone-600 dark:text-stone-300 border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 whitespace-nowrap';
+/** Adaptador das grades do módulo para a GradeLista (☰, colunas configuráveis, preferências por usuário) */
+export const Grade: React.FC<GradeProps> = ({ colunas, riscada, onDuploClique, acoes, ...resto }) => {
+  // A GradeLista não informa a coluna do duplo clique: guarda a célula clicada (td[data-col] = chave)
+  const colunaClicada = useRef('');
+  const cols: ColunaLista<Reg>[] = colunas.map((c) => ({
+    id: c.chave,
+    campo: c.chave,
+    titulo: c.titulo,
+    rotulo: c.rotulo,
+    alinhar: c.alinhar ?? 'esq',
+    largura: c.largura,
+    render: c.render,
+    // O rodapé da GradeLista quebra linha: soma longa ('R$ 3.590,00') fica numa linha só
+    rodape: c.rodape === undefined ? undefined : <span className="whitespace-nowrap">{c.rodape}</span>,
+    grupo: c.grupo,
+    aoClicarTitulo: c.aoClicarTitulo,
+    ordenada: c.ordenada,
+    oculta: c.oculta,
+    fixa: c.fixa,
+    classe: (r) => `${c.classe?.(r) ?? ''} ${riscada?.(r) ? '!text-stone-400' : ''}`,
+  }));
   return (
-    <div className="flex-1 overflow-auto min-h-0">
-      <table className="w-full text-xs border-separate border-spacing-0">
-        <thead className="sticky top-0 z-10">
-          {grupos && (
-            <tr>
-              {grupos.map((g, i) => (
-                <th key={i} colSpan={g.n} className={`${th} text-center border-r`}>
-                  {g.titulo}
-                </th>
-              ))}
-              {acoes && <th className={th} />}
-            </tr>
-          )}
-          <tr>
-            {colunas.map((c) => (
-              <th
-                key={c.chave}
-                onClick={c.aoClicarTitulo}
-                className={`${th} ${c.alinhar ? ALINHAR[c.alinhar] : 'text-left'} ${c.largura ?? ''} ${c.aoClicarTitulo ? 'cursor-pointer hover:text-blue-600' : ''}`}
-              >
-                {c.titulo}
-              </th>
-            ))}
-            {acoes && <th className={`${th} sticky right-0 text-center border-l w-12`}>Ações</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {carregando ? (
-            <tr>
-              <td colSpan={colunas.length + (acoes ? 1 : 0)} className="py-10 text-center">
-                <Loader2 className="w-5 h-5 animate-spin text-stone-400 inline" />
-              </td>
-            </tr>
-          ) : !linhas.length ? (
-            <tr>
-              <td colSpan={colunas.length + (acoes ? 1 : 0)} className="py-10 text-center text-stone-400">
-                {vazio}
-              </td>
-            </tr>
-          ) : (
-            linhas.map((r) => {
-              const sel = selecionado !== undefined && String(r[chave]) === String(selecionado);
-              return (
-                <tr
-                  key={String(r[chave])}
-                  onClick={() => onSelecionar?.(r)}
-                  className={`${sel ? 'bg-blue-50 dark:bg-blue-950/40' : 'bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800'} ${riscada?.(r) ? 'line-through text-stone-400' : 'text-stone-800 dark:text-stone-200'} ${onSelecionar ? 'cursor-pointer' : ''}`}
-                >
-                  {colunas.map((c) => (
-                    <td
-                      key={c.chave}
-                      onDoubleClick={() => onDuploClique?.(r, c.chave)}
-                      className={`px-2.5 py-1.5 border-b border-stone-100 dark:border-stone-800 whitespace-nowrap ${c.alinhar ? ALINHAR[c.alinhar] : ''} ${c.classe?.(r) ?? ''}`}
-                    >
-                      {c.render ? c.render(r) : r[c.chave]}
-                    </td>
-                  ))}
-                  {acoes && <td className="sticky right-0 px-2 py-1 text-center border-b border-l border-stone-100 dark:border-stone-800 bg-inherit">{acoes(r)}</td>}
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-        {temRodape && (
-          <tfoot className="sticky bottom-0">
-            <tr>
-              {colunas.map((c) => (
-                <td key={c.chave} className={`px-2.5 py-2 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 font-bold text-blue-900 dark:text-blue-300 whitespace-nowrap ${c.alinhar ? ALINHAR[c.alinhar] : ''}`}>
-                  {c.rodape}
-                </td>
-              ))}
-              {acoes && <td className="bg-stone-50 dark:bg-stone-950 border-t border-stone-200 dark:border-stone-800" />}
-            </tr>
-          </tfoot>
-        )}
-      </table>
+    <div className="contents" onDoubleClickCapture={(e) => (colunaClicada.current = (e.target as HTMLElement).closest('td[data-col]')?.getAttribute('data-col') ?? '')}>
+      <GradeLista<Reg>
+        {...resto}
+        colunas={cols}
+        classeLinha={riscada ? (r) => (riscada(r) ? 'line-through' : '') : undefined}
+        onDuploClique={onDuploClique ? (r) => onDuploClique(r, colunaClicada.current) : undefined}
+        acoes={acoes}
+        larguraAcoes="w-16 min-w-16 max-w-16"
+      />
     </div>
   );
 };

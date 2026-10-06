@@ -147,7 +147,7 @@ const FormProduto: React.FC<{ req: RegistroCrud; item: RegistroCrud | null; apoi
 };
 
 /** Requisições Pendentes → Gerar Requisições (o modal continua aberto, como no Delphi) */
-const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | null, msg: string) => void }> = ({ onFechar, onGerado }) => {
+const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | null, msg: string) => void; onToast: (msg: string) => void }> = ({ onFechar, onGerado, onToast }) => {
   const [lista, setLista] = useState<any[] | null>(null);
   const [desmarcados, setDesmarcados] = useState<Set<number>>(new Set());
   const [gerando, setGerando] = useState(false);
@@ -218,7 +218,7 @@ const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | nu
     >
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mb-3" />}
       <div className="h-[50vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg">
-        <Grade colunas={colunas} linhas={lista ?? []} carregando={!lista} vazio="Nenhuma requisição pendente." />
+        <Grade nome="req.pendentes" onToast={onToast} colunas={colunas} linhas={lista ?? []} carregando={!lista} vazio="Nenhuma requisição pendente." />
       </div>
     </Janela>
   );
@@ -324,15 +324,10 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
     { chave: 'id_cliente', titulo: 'ID Cli.', largura: 70, alinhar: 'dir' },
     { chave: 'cliente_nome', titulo: 'Cliente', largura: 220 },
     { chave: 'obs', titulo: 'Observação', largura: 220 },
-    { chave: 'id_usuario_inclusao', titulo: 'Incluído por:', largura: 110, render: (r) => r.usuario_nome || r.id_usuario_inclusao },
+    { chave: 'id_usuario_inclusao', titulo: 'Incluído por:', largura: 110, oculta: true, render: (r) => r.usuario_nome || r.id_usuario_inclusao },
     { chave: 'datahora_inclusao', titulo: 'Incluído em:', largura: 130, alinhar: 'centro', render: (r) => dataHoraBR(r.datahora_inclusao) },
-    {
-      chave: 'acoes',
-      fixa: true,
-      titulo: 'Ações',
-      largura: 60,
-      alinhar: 'centro',
-      render: (r) => (
+  ];
+  const acoesReq = (r: any) => (
         <MenuAcoes>
           <BotaoAcao icone={Printer} titulo="Imprimir" descricao="PDF da requisição" onClick={() => imprimir(r)} />
           <BotaoAcao icone={CheckCheck} titulo="Marcar Entregue" descricao="Status Entregue com data de hoje" tom="verde" onClick={() => entregue(r)} />
@@ -340,9 +335,7 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
           <BotaoAcao icone={Pencil} titulo="Editar" descricao="Alterar a requisição" onClick={() => setFormReq({ req: r })} />
           <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Excluir a requisição" tom="perigo" onClick={() => excluir(r)} />
         </MenuAcoes>
-      ),
-    },
-  ];
+  );
 
   const colunasProd: ColunaGrade<any>[] = [
     { chave: 'id_equip', titulo: 'ID Equip', largura: 60, alinhar: 'dir' },
@@ -356,13 +349,8 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
     { chave: 'datahora_entrega', titulo: 'Entregue em:', largura: 130, alinhar: 'centro', render: (r) => dataHoraBR(r.datahora_entrega) },
     { chave: 'qtdade_entregue', titulo: 'Qtd. Entregue', largura: 90, alinhar: 'dir', render: (r) => valorBR(r.qtdade_entregue) },
     { chave: 'obs', titulo: 'Observação', largura: 200 },
-    {
-      chave: 'acoes',
-      fixa: true,
-      titulo: 'Ações',
-      largura: 70,
-      alinhar: 'centro',
-      render: (p) => (
+  ];
+  const acoesProd = (p: any) => (
         <span className="inline-flex gap-0.5">
           <BotaoAcao icone={Pencil} titulo="Editar" descricao="Alterar o produto" onClick={() => setFormItem({ item: p })} />
           <BotaoAcao
@@ -387,9 +375,7 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
             }
           />
         </span>
-      ),
-    },
-  ];
+  );
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -413,7 +399,7 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
       </Barra>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
       <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-stone-900">
-        <Grade colunas={colunas} linhas={lista} carregando={carregando} selecionado={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setFormReq({ req: r })} vazio="Nenhuma requisição neste status." />
+        <Grade nome="req.lista" onToast={onToast} acoes={acoesReq} larguraAcoes="w-16 min-w-16 max-w-16" colunas={colunas} linhas={lista} carregando={carregando} selecionado={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setFormReq({ req: r })} vazio="Nenhuma requisição neste status." />
       </div>
       <div className="h-[240px] shrink-0 flex flex-col border-t-2 border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
         <div className="flex items-center gap-2 px-4 py-2 border-b border-stone-100 dark:border-stone-800">
@@ -423,7 +409,7 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
             <Plus className="w-4 h-4" /> Novo produto
           </button>
         </div>
-        <Grade colunas={colunasProd} linhas={produtos} carregando={carregandoProd} onDuploClique={(p) => setFormItem({ item: p })} vazio={req ? 'Nenhum produto nesta requisição.' : 'Selecione uma requisição.'} />
+        <Grade nome="req.itens" onToast={onToast} acoes={acoesProd} larguraAcoes="w-20 min-w-20 max-w-20" colunas={colunasProd} linhas={produtos} carregando={carregandoProd} onDuploClique={(p) => setFormItem({ item: p })} vazio={req ? 'Nenhum produto nesta requisição.' : 'Selecione uma requisição.'} />
       </div>
 
       {formReq && (
@@ -453,6 +439,7 @@ export const TelaRequisicoes: React.FC<TelaProps> = ({ onToast, refreshToken }) 
       )}
       {pendentes && (
         <Pendentes
+          onToast={onToast}
           onFechar={() => setPendentes(false)}
           onGerado={(ultima, msg) => {
             onToast(msg);

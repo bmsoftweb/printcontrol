@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Calculator, CheckCircle2, ChevronDown, Copy, Edit3, FileCheck, MoreHorizontal, Pencil, Plus, Printer, Receipt, RefreshCw, RotateCcw, Settings2, Sigma, Trash2, Truck, XCircle,
+  Calculator, CheckCircle2, Copy, Edit3, FileCheck, MoreHorizontal, Pencil, Plus, Printer, Receipt, RefreshCw, RotateCcw, Settings2, Sigma, Trash2, Truck, XCircle,
 } from 'lucide-react';
 import type { TelaProps } from '../tipos';
 import { api } from '../../services/api';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import { AvisoErro } from '../../components/AvisoErro';
 import { DateField } from '../../components/DateField';
 import { INPUT_CLASS } from '../../utils/formStyles';
@@ -69,7 +70,6 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
-  const [menuOrc, setMenuOrc] = useState(false);
   const [opDestino, setOpDestino] = useState('');
   const seq = useRef(0);
 
@@ -191,11 +191,12 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
   // ---------------------------------------------------------------- grades
 
   const colunasVendas: Coluna<Linha>[] = [
-    { chave: 'apelido_operacao', titulo: 'Operação', alinhar: 'centro', render: (r) => <Badge texto={r.apelido_operacao} cor={r.operacao_cor} /> },
+    { chave: 'apelido_operacao', titulo: 'Operação', alinhar: 'centro', fixa: true, render: (r) => <Badge texto={r.apelido_operacao} cor={r.operacao_cor} /> },
     { chave: 'status', titulo: 'Status', alinhar: 'centro', render: (r) => <BadgeStatus status={r.status} /> },
     {
       chave: 'obs',
       titulo: 'Obs.',
+      rotulo: 'Observação',
       alinhar: 'centro',
       render: (r) => (
         <button
@@ -249,15 +250,15 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
     { chave: 'id_cliente', titulo: 'Id Cliente', alinhar: 'dir' },
     { chave: 'nome', titulo: 'Cliente' },
     { chave: 'valor_total_liquido', titulo: 'Total Líquido', alinhar: 'dir', render: (r) => <b>{moeda(r.valor_total_liquido)}</b> },
-    { chave: 'id_condicao', titulo: 'Id Condição', alinhar: 'dir' },
+    { chave: 'id_condicao', titulo: 'Id Condição', alinhar: 'dir', oculta: true },
     { chave: 'apelido_plano', titulo: 'Condição' },
-    { chave: 'id_vendedor1', titulo: 'Id Vend (1)', alinhar: 'dir' },
+    { chave: 'id_vendedor1', titulo: 'Id Vend (1)', alinhar: 'dir', oculta: true },
     { chave: 'nome_1', titulo: 'Nome Vend (1)' },
-    { chave: 'id_vendedor2', titulo: 'Id Vend (2)', alinhar: 'dir', render: (r) => (num(r.id_vendedor2) ? r.id_vendedor2 : '') },
-    { chave: 'nome_2', titulo: 'Nome Vend (2)' },
-    { chave: 'valor_total_liquido_antes_desconto_nf', titulo: 'Total Produtos', alinhar: 'dir', render: (r) => moeda(r.valor_total_liquido_antes_desconto_nf) },
-    { chave: 'valor_acrescimo_nf', titulo: 'R$ Acresc.', alinhar: 'dir', render: (r) => moeda(r.valor_acrescimo_nf) },
-    { chave: 'valor_desconto_nf', titulo: 'R$ Desc.', alinhar: 'dir', render: (r) => moeda(r.valor_desconto_nf) },
+    { chave: 'id_vendedor2', titulo: 'Id Vend (2)', alinhar: 'dir', oculta: true, render: (r) => (num(r.id_vendedor2) ? r.id_vendedor2 : '') },
+    { chave: 'nome_2', titulo: 'Nome Vend (2)', oculta: true },
+    { chave: 'valor_total_liquido_antes_desconto_nf', titulo: 'Total Produtos', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_total_liquido_antes_desconto_nf) },
+    { chave: 'valor_acrescimo_nf', titulo: 'R$ Acresc.', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_acrescimo_nf) },
+    { chave: 'valor_desconto_nf', titulo: 'R$ Desc.', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_desconto_nf) },
     {
       chave: 'data_saida',
       titulo: 'Data Saída',
@@ -279,7 +280,7 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
         </button>
       ),
     },
-    { chave: 'datahora_inclusao', titulo: 'Registrado em:', alinhar: 'centro', render: (r) => dataHoraBR(r.datahora_inclusao) },
+    { chave: 'datahora_inclusao', titulo: 'Registrado em:', alinhar: 'centro', oculta: true, render: (r) => dataHoraBR(r.datahora_inclusao) },
   ];
 
   const pedido = venda?.operacao_codigo === 'PED';
@@ -296,9 +297,9 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
     { chave: 'valor_desconto_total', titulo: 'R$ Desc.', alinhar: 'dir', render: (r) => moeda(r.valor_desconto_total) },
     { chave: 'valor_total_liquido_final', titulo: 'Valor Líquido', alinhar: 'dir', render: (r) => <b>{moeda(r.valor_total_liquido_final)}</b> },
     { chave: 'cfop', titulo: 'CFOP', alinhar: 'centro' },
-    { chave: 'id', titulo: 'ID', alinhar: 'dir' },
+    { chave: 'id', titulo: 'ID', alinhar: 'dir', oculta: true },
     { chave: 'qtdade_devol', titulo: pedido ? 'Qtd. Fatur.' : 'Qtd. Devolv.', alinhar: 'dir', render: (r) => qtd(r.qtdade_devol) },
-    { chave: 'id_vendas_produtos_devol', titulo: 'Id de Origem', alinhar: 'dir', render: (r) => (num(r.id_vendas_produtos_devol) ? r.id_vendas_produtos_devol : '') },
+    { chave: 'id_vendas_produtos_devol', titulo: 'Id de Origem', alinhar: 'dir', oculta: true, render: (r) => (num(r.id_vendas_produtos_devol) ? r.id_vendas_produtos_devol : '') },
   ];
 
   // ---------------------------------------------------------------- painel de condições (§2.5)
@@ -338,47 +339,25 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
         <Botao icone={Printer} onClick={imprimir} desabilitado={!venda}>
           Imprimir
         </Botao>
-        <Botao icone={FileCheck} onClick={abrirNFe} carregando={ocupado === 'nfe'}>
-          NFe
-        </Botao>
-        <Botao icone={Receipt} onClick={boletos} desabilitado={!venda}>
-          Boletos
-        </Botao>
-        <div className="relative">
-          <Botao icone={ChevronDown} onClick={() => setMenuOrc((m) => !m)} desabilitado={venda?.operacao_codigo !== 'ORC'} titulo="Orçamento">
-            Orçamento
-          </Botao>
-          {menuOrc && venda?.operacao_codigo === 'ORC' && (
-            <div className="absolute left-0 top-10 z-30 min-w-40 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl" onMouseLeave={() => setMenuOrc(false)}>
-              <button
-                type="button"
-                className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
-                onClick={() => {
-                  setMenuOrc(false);
-                  if (!exigir(venda.status !== 'C', 'Este orçamento já está confirmado!')) return;
-                  setOpDestino(String(opsDestino[0]?.id ?? ''));
-                  setDialogo({ t: 'duplicar', venda, orcamento: true });
-                }}
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Confirmar
-              </button>
-              <button
-                type="button"
-                className="w-full flex items-center gap-2 text-left px-3 py-2 text-xs text-rose-700 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
-                onClick={() => {
-                  setMenuOrc(false);
-                  setDialogo({ t: 'descartar' });
-                }}
-              >
-                <XCircle className="w-4 h-4" /> Descartar
-              </button>
-            </div>
-          )}
-        </div>
-        <span className="flex-1" />
-        <Botao icone={Settings2} onClick={() => setDialogo({ t: 'tabelas' })} titulo="Operações, séries, condições e fórmulas de imposto">
-          Tabelas
-        </Botao>
+        <MaisAcoes
+          itens={[
+            { icone: FileCheck, titulo: ocupado === 'nfe' ? 'NFe (calculando impostos…)' : 'NFe', onClick: abrirNFe, disabled: ocupado === 'nfe' },
+            { icone: Receipt, titulo: 'Boletos', onClick: boletos, disabled: !venda },
+            {
+              icone: CheckCircle2,
+              titulo: 'Confirmar orçamento',
+              separar: true,
+              disabled: venda?.operacao_codigo !== 'ORC',
+              onClick: () => {
+                if (!venda || !exigir(venda.status !== 'C', 'Este orçamento já está confirmado!')) return;
+                setOpDestino(String(opsDestino[0]?.id ?? ''));
+                setDialogo({ t: 'duplicar', venda, orcamento: true });
+              },
+            },
+            { icone: XCircle, titulo: 'Descartar orçamento', tom: 'perigo', disabled: venda?.operacao_codigo !== 'ORC', onClick: () => setDialogo({ t: 'descartar' }) },
+            { icone: Settings2, titulo: 'Tabelas', separar: true, onClick: () => setDialogo({ t: 'tabelas' }) },
+          ]}
+        />
       </div>
 
       {/* Filtros (no Delphi ficavam no cabeçalho das colunas) */}
@@ -438,7 +417,7 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
       {/* Lista + condições */}
       <div className="flex-[3] min-h-0 flex">
         <div className="flex-1 min-w-0 flex flex-col">
-          <Grade colunas={colunasVendas} linhas={vendas} carregando={carregando} selecionado={selId} onSelecionar={selecionar} onDuploClique={(r) => (selecionar(r), r.status === 'F' ? setErro(FINALIZADA) : setDialogo({ t: 'venda', venda: { ...r, ...(venda?.id === r.id ? venda : {}) } }))} vazio="Nenhuma venda no filtro." />
+          <Grade nome="vendas.lista" onToast={onToast} colunas={colunasVendas} linhas={vendas} carregando={carregando} selecionado={selId} onSelecionar={selecionar} onDuploClique={(r) => (selecionar(r), r.status === 'F' ? setErro(FINALIZADA) : setDialogo({ t: 'venda', venda: { ...r, ...(venda?.id === r.id ? venda : {}) } }))} vazio="Nenhuma venda no filtro." />
         </div>
         <aside className="w-64 shrink-0 border-l border-stone-200 dark:border-stone-800 flex flex-col">
           <div className="px-3 py-2 text-xs font-semibold text-stone-600 dark:text-stone-300 border-b border-stone-100 dark:border-stone-800">Condições</div>
@@ -455,6 +434,8 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
           ) : null}
           <div className="flex-1 min-h-0 flex flex-col">
             <Grade
+              nome="vendas.condicoes"
+              onToast={onToast}
               colunas={[
                 { chave: 'apelido', titulo: 'Cond.' },
                 { chave: 'nr_vezes', titulo: 'x', alinhar: 'centro' },
@@ -476,34 +457,32 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
           <span className="text-xs font-bold text-stone-700 dark:text-stone-200 mr-2">
             Produtos da Venda{venda ? ` nº ${venda.id}` : ''} {statusSel && <BadgeStatus status={statusSel} />}
           </span>
-          <Botao icone={Plus} onClick={noItem(() => setDialogo({ t: 'item', item: null }))} desabilitado={!venda} titulo="Incluir produto" />
+          <Botao icone={Plus} tom="primario" onClick={noItem(() => setDialogo({ t: 'item', item: null }))} desabilitado={!venda} titulo="Incluir produto" />
           <Botao icone={Edit3} onClick={noItem(() => item && exigir(!(num(item.id_vendas_produtos_devol) > 0), 'Produto capturado para devolução não pode ser editado!') && setDialogo({ t: 'item', item }))} desabilitado={!item} titulo="Editar produto" />
           <Botao icone={Trash2} tom="perigo" onClick={noItem(() => item && setDialogo({ t: 'excluirItem' }))} desabilitado={!item} titulo="Excluir produto" />
           <span className="w-px h-6 bg-stone-200 dark:bg-stone-700 mx-1" />
-          <Botao icone={RotateCcw} desabilitado={!venda} onClick={noItem(() => exigir(venda!.operacao_codigo === 'DEV', 'Esta venda não é uma devolução!') && setDialogo({ t: 'devolucao' }))}>
-            Devolução
-          </Botao>
-          <Botao icone={Truck} desabilitado={!venda} onClick={noItem(() => exigir(venda!.operacao_codigo === 'VEN', 'Este registro não é uma Venda!') && setDialogo({ t: 'pedidos' }))}>
-            Capturar Pedidos
-          </Botao>
-          <Botao
-            icone={Calculator}
-            desabilitado={!venda?.itens?.length}
-            carregando={ocupado === 'impostos'}
-            onClick={async () => {
-              const r = await executar('impostos', () => api.post(`/api/vendas/${venda!.id}/impostos`));
-              if (r) {
-                onToast(`Impostos calculados (${r.calculados} item(ns)).`);
-                if (r.avisos?.length) setErro(`Avisos das fórmulas:\n${r.avisos.join('\n')}`);
-                recarregar();
-              }
-            }}
-          >
-            Calcular Impostos
-          </Botao>
           <Botao icone={Sigma} desabilitado={!venda} carregando={ocupado === 'totalizar'} onClick={noItem(async () => (await executar('totalizar', () => api.post(`/api/vendas/${venda!.id}/totalizar`), 'Venda totalizada.')) && recarregar())}>
             Totalizar
           </Botao>
+          <MaisAcoes
+            itens={[
+              { icone: RotateCcw, titulo: 'Devolução', disabled: !venda, onClick: noItem(() => exigir(venda!.operacao_codigo === 'DEV', 'Esta venda não é uma devolução!') && setDialogo({ t: 'devolucao' })) },
+              { icone: Truck, titulo: 'Capturar Pedidos', disabled: !venda, onClick: noItem(() => exigir(venda!.operacao_codigo === 'VEN', 'Este registro não é uma Venda!') && setDialogo({ t: 'pedidos' })) },
+              {
+                icone: Calculator,
+                titulo: ocupado === 'impostos' ? 'Calculando impostos…' : 'Calcular Impostos',
+                disabled: !venda?.itens?.length || ocupado === 'impostos',
+                onClick: async () => {
+                  const r = await executar('impostos', () => api.post(`/api/vendas/${venda!.id}/impostos`));
+                  if (r) {
+                    onToast(`Impostos calculados (${r.calculados} item(ns)).`);
+                    if (r.avisos?.length) setErro(`Avisos das fórmulas:\n${r.avisos.join('\n')}`);
+                    recarregar();
+                  }
+                },
+              },
+            ]}
+          />
           {venda && (
             <span className="ml-auto text-[11px] text-stone-500">
               Bruto <b>{moeda(venda.valor_total_bruto)}</b> · Acrésc. <b>{moeda(venda.valor_acrescimo_total)}</b> · Desc. <b>{moeda(venda.valor_desconto_total)}</b> · Líquido{' '}
@@ -512,6 +491,8 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
           )}
         </div>
         <Grade
+          nome="vendas.itens"
+          onToast={onToast}
           colunas={colunasItens}
           linhas={venda?.itens ?? []}
           selecionado={itemSel}
@@ -548,6 +529,7 @@ export const TelaVendas: React.FC<TelaProps> = (p) => {
           venda={venda}
           preparo={dialogo.preparo}
           apoio={apoio}
+          onToast={onToast}
           onFechar={() => {
             setDialogo(null);
             recarregar();

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Ban, Download, FileCheck2, FileCode2, FileText, Mail, Printer, Receipt, RefreshCw, Search, Send, Slash, X } from 'lucide-react';
+import { Ban, Download, FileCheck2, FileCode2, FileText, Mail, Printer, Receipt, RefreshCw, Search, Send, Slash } from 'lucide-react';
 import { api, baixarArquivo } from '../../services/api';
 import { Janela, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from '../../components/Janela';
 import { AvisoErro } from '../../components/AvisoErro';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import { INPUT_CLASS, LABEL_CLASS } from '../../utils/formStyles';
 import { BoletosAreceber } from '../faturamento';
 import { Botao, Carregando, Grade, PreviewPdf, dataBR, dataHoraBR, moeda, numero9, type Coluna, type Linha } from './comum';
@@ -98,26 +99,26 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
   };
 
   const colunas: Coluna<Linha>[] = [
-    { chave: 'sit', titulo: '●', alinhar: 'centro', render: (r) => <Situacao v={r} /> },
+    { chave: 'sit', titulo: '●', rotulo: 'Situação', alinhar: 'centro', render: (r) => <Situacao v={r} /> },
     { chave: 'venda_status', titulo: 'S', alinhar: 'centro' },
     { chave: 'es', titulo: 'E/S', alinhar: 'centro' },
     { chave: 'data_venda', titulo: 'Data', alinhar: 'centro', render: (r) => dataBR(r.data_venda) },
-    { chave: 'id_operacao', titulo: 'Id Op.', alinhar: 'dir' },
+    { chave: 'id_operacao', titulo: 'Id Op.', alinhar: 'dir', oculta: true },
     { chave: 'apelido_operacao', titulo: 'Operação' },
     { chave: 'serie', titulo: 'Série', alinhar: 'centro' },
     { chave: 'numero', titulo: 'Número', alinhar: 'dir', render: (r) => numero9(r.numero) },
     { chave: 'id_cliente', titulo: 'Id Cliente', alinhar: 'dir' },
     { chave: 'cliente_nome', titulo: 'Cliente' },
     { chave: 'valor_total_liquido', titulo: 'Total Líquido', alinhar: 'dir', render: (r) => moeda(r.valor_total_liquido) },
-    { chave: 'valor_total_bruto', titulo: 'Total Bruto', alinhar: 'dir', render: (r) => moeda(r.valor_total_bruto) },
-    { chave: 'valor_acrescimo_total', titulo: 'R$ Acresc.', alinhar: 'dir', render: (r) => moeda(r.valor_acrescimo_total) },
-    { chave: 'valor_desconto_total', titulo: 'R$ Desc.', alinhar: 'dir', render: (r) => moeda(r.valor_desconto_total) },
+    { chave: 'valor_total_bruto', titulo: 'Total Bruto', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_total_bruto) },
+    { chave: 'valor_acrescimo_total', titulo: 'R$ Acresc.', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_acrescimo_total) },
+    { chave: 'valor_desconto_total', titulo: 'R$ Desc.', alinhar: 'dir', oculta: true, render: (r) => moeda(r.valor_desconto_total) },
     { chave: 'nfe_chave', titulo: 'Chave NFe' },
     { chave: 'nfe_status', titulo: 'Status NFe', alinhar: 'centro' },
     { chave: 'nfe_protocolo', titulo: 'Protocolo Envio' },
-    { chave: 'nfe_recibo', titulo: 'Recibo' },
+    { chave: 'nfe_recibo', titulo: 'Recibo', oculta: true },
     { chave: 'nfe_cancelada', titulo: 'NFe Cancelada', alinhar: 'centro' },
-    { chave: 'nfe_protocolo_cancelamento', titulo: 'Protocolo Cancelamento' },
+    { chave: 'nfe_protocolo_cancelamento', titulo: 'Protocolo Cancelamento', oculta: true },
     { chave: 'nfe_ultima_msg', titulo: 'Última Mensagem' },
   ];
 
@@ -152,12 +153,6 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
   return (
     <Janela titulo="Gerenciamento de NF-e" subtitulo="Notas fiscais eletrônicas (modelo 55) da empresa ativa" onFechar={onFechar} largura="max-w-[97vw]">
       <div className="flex flex-wrap gap-1.5 mb-3">
-        <Botao icone={X} onClick={onFechar}>
-          Fechar
-        </Botao>
-        <Botao icone={Receipt} onClick={() => exigirNota() && setBoletos(true)}>
-          Boletos
-        </Botao>
         <Botao
           icone={Send}
           tom="primario"
@@ -170,14 +165,8 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
         >
           Registrar NFe
         </Botao>
-        <Botao icone={FileCode2} carregando={ocupado === 'xml'} titulo="Gera, assina (se houver certificado) e confere o XML no schema, sem enviar" onClick={() => exigirNota() && executar('xml', () => api.post(`/api/vendas-nfe/${nota!.id}/gerar-xml`)).then((r) => r && setXmlConf(r))}>
-          Conferir XML
-        </Botao>
         <Botao icone={Printer} onClick={() => exigirNota() && setPdf({ url: `/api/vendas-nfe/${nota!.id}/danfe`, titulo: `DANFE ${nota!.serie}/${nota!.numero}` })}>
           DANFE
-        </Botao>
-        <Botao icone={Download} titulo="Baixar o XML gravado" onClick={() => exigirNota() && baixarArquivo(`/api/vendas-nfe/${nota!.id}/xml`, `${nota!.nfe_chave || nota!.id}.xml`).catch((e: any) => setErro(e.message))}>
-          XML
         </Botao>
         <Botao icone={Search} carregando={ocupado === 'consultar'} onClick={() => exigirNota() && executar('consultar', () => api.post(`/api/vendas-nfe/${nota!.id}/consultar`), (r) => `${r.cStat} - ${r.xMotivo}${r.eventos?.length ? ` · ${r.eventos.length} evento(s)` : ''}`)}>
           Consultar
@@ -185,21 +174,27 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
         <Botao icone={Mail} onClick={() => abrirPainel('email')}>
           Enviar e-mail
         </Botao>
-        <Botao icone={FileText} onClick={() => abrirPainel('cce')}>
-          Carta Correção
-        </Botao>
-        <Botao icone={Ban} tom="perigo" onClick={() => abrirPainel('cancelar')}>
-          Cancelar NFe
-        </Botao>
-        <Botao icone={Slash} onClick={() => abrirPainel('inutilizar')}>
-          Inutilizar Numeração
-        </Botao>
+        <MaisAcoes
+          itens={[
+            { icone: Receipt, titulo: 'Boletos', onClick: () => exigirNota() && setBoletos(true) },
+            {
+              icone: FileCode2,
+              titulo: ocupado === 'xml' ? 'Conferindo XML…' : 'Conferir XML',
+              disabled: ocupado === 'xml',
+              onClick: () => exigirNota() && executar('xml', () => api.post(`/api/vendas-nfe/${nota!.id}/gerar-xml`)).then((r) => r && setXmlConf(r)),
+            },
+            { icone: Download, titulo: 'Baixar XML', onClick: () => exigirNota() && baixarArquivo(`/api/vendas-nfe/${nota!.id}/xml`, `${nota!.nfe_chave || nota!.id}.xml`).catch((e: any) => setErro(e.message)) },
+            { icone: FileText, titulo: 'Carta Correção', separar: true, onClick: () => abrirPainel('cce') },
+            { icone: Slash, titulo: 'Inutilizar Numeração', onClick: () => abrirPainel('inutilizar') },
+            { icone: Ban, titulo: 'Cancelar NFe', tom: 'perigo', separar: true, onClick: () => abrirPainel('cancelar') },
+          ]}
+        />
         <Botao icone={RefreshCw} onClick={carregar} carregando={carregando} titulo="Atualizar" />
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mb-3 whitespace-pre-line" />}
       <div className="text-xs font-semibold text-stone-500 mb-1">Listagem das Notas Fiscais</div>
       <div className="h-[38vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <Grade colunas={colunas} linhas={notas} carregando={carregando} selecionado={sel} onSelecionar={(r) => setSel(r.id)} vazio="Nenhuma venda finalizada com série de NF-e (modelo 55)." />
+        <Grade nome="vendas.nfe" onToast={onToast} colunas={colunas} linhas={notas} carregando={carregando} selecionado={sel} onSelecionar={(r) => setSel(r.id)} vazio="Nenhuma venda finalizada com série de NF-e (modelo 55)." />
       </div>
       <div className="flex gap-1 mt-3 border-b border-stone-200 dark:border-stone-800">
         {(['eventos', 'log'] as const).map((a) => (
@@ -221,6 +216,8 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
                 <Carregando />
               ) : (
                 <Grade
+                  nome="vendas.nfe.eventos"
+                  onToast={onToast}
                   colunas={[
                     { chave: 'seq', titulo: 'Seq#', alinhar: 'centro' },
                     { chave: 'data', titulo: 'Data', alinhar: 'centro', render: (r) => dataBR(r.data) },
@@ -250,6 +247,8 @@ export const GerenciadorNFe: React.FC<{ idVenda?: number; onFechar: () => void; 
           </>
         ) : (
           <Grade
+            nome="vendas.nfe.log"
+            onToast={onToast}
             colunas={[
               { chave: 'data_hora', titulo: 'Registrado em', alinhar: 'centro', render: (r) => dataHoraBR(r.data_hora) },
               { chave: 'serie_numero', titulo: 'Série/Número', alinhar: 'centro' },

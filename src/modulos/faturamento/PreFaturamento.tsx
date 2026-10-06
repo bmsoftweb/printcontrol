@@ -13,7 +13,12 @@ import { Grade, TituloPainel, data, inteiro, moeda, type Reg } from './comum';
  * Painel Pré-Faturamento (pan_pre_fatur): agrupa as leituras não faturadas em notas (cliente + vencimento + série,
  * juntando contratos com juntar_nota) e grava o faturamento das notas marcadas.
  */
-export const PreFaturamento: React.FC<{ clientes: { id: number; nome: string }[]; onFechar: () => void; onGravado: (qtd: number) => void }> = ({ clientes, onFechar, onGravado }) => {
+export const PreFaturamento: React.FC<{ clientes: { id: number; nome: string }[]; onFechar: () => void; onGravado: (qtd: number) => void; onToast?: (m: string) => void }> = ({
+  clientes,
+  onFechar,
+  onGravado,
+  onToast,
+}) => {
   const [cliente, setCliente] = useState('');
   const [grupo, setGrupo] = useState('');
   const [notas, setNotas] = useState<Reg[] | null>(null);
@@ -95,6 +100,8 @@ export const PreFaturamento: React.FC<{ clientes: { id: number; nome: string }[]
         <div className="flex flex-col min-h-0 border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
           <TituloPainel direita={<span className="text-[11px] text-stone-500">{escolhidas.length} de {notas?.length ?? 0} marcada(s)</span>}>Notas</TituloPainel>
           <Grade
+            nome="faturamento.pre"
+            onToast={onToast}
             chave="chave"
             linhas={notas ?? []}
             selecionado={atual ?? undefined}
@@ -102,8 +109,8 @@ export const PreFaturamento: React.FC<{ clientes: { id: number; nome: string }[]
             carregando={gerando}
             vazio={notas ? 'Nenhuma leitura a faturar.' : 'Clique em Gerar.'}
             colunas={[
-              { chave: 'f', titulo: 'F', alinhar: 'centro', render: (r) => <span onClick={(e) => e.stopPropagation()}><Toggle size="sm" checked={marcadas.has(r.chave)} onChange={(v) => marcar(r.chave, v)} label=" " /></span> },
-              { chave: 'nome', titulo: 'Cliente', render: (r) => <span title={`${r.contagem} leitura(s) — série ${r.serie_nf}`}>{r.nome}</span> },
+              { chave: 'f', titulo: 'F', rotulo: 'Faturar', alinhar: 'centro', render: (r) => <span onClick={(e) => e.stopPropagation()}><Toggle size="sm" checked={marcadas.has(r.chave)} onChange={(v) => marcar(r.chave, v)} label=" " /></span> },
+              { chave: 'nome', titulo: 'Cliente', fixa: true, render: (r) => <span title={`${r.contagem} leitura(s) — série ${r.serie_nf}`}>{r.nome}</span> },
               { chave: 'contagem', titulo: 'Leituras', alinhar: 'dir', rodape: inteiro(escolhidas.reduce((s, n) => s + n.contagem, 0)) },
               { chave: 'total_geral', titulo: 'Total R$', alinhar: 'dir', render: (r) => moeda(r.total_geral), rodape: `R$ ${moeda(escolhidas.reduce((s, n) => s + Number(n.total_geral), 0))}` },
               { chave: 'data_vencimento', titulo: 'Vencto.', alinhar: 'centro', render: (r) => data(r.data_vencimento) },
@@ -113,6 +120,8 @@ export const PreFaturamento: React.FC<{ clientes: { id: number; nome: string }[]
         <div className="flex flex-col min-h-0 border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
           <TituloPainel>Produtos da Nota</TituloPainel>
           <Grade
+            nome="faturamento.pre.produtos"
+            onToast={onToast}
             linhas={nota?.leituras ?? []}
             vazio="Escolha uma nota."
             colunas={[

@@ -7,7 +7,7 @@ import { AvisoErro } from '../../components/AvisoErro';
 import { NumberField } from '../../components/NumberField';
 import { DateField } from '../../components/DateField';
 import { INPUT_CLASS, LABEL_CLASS } from '../../utils/formStyles';
-import { moeda, num, r2, type Linha } from './comum';
+import { Grade, moeda, num, r2, type Linha } from './comum';
 import type { Apoio } from './formularios';
 
 export interface Parcela {
@@ -28,13 +28,14 @@ export interface Preparo {
 }
 
 /** Aba "Fechamento" (§7): parcelas editáveis; editar marca a parcela como digitada (D) */
-export const Fechamento: React.FC<{ venda: Linha; preparo: Preparo; apoio: Apoio; onFechar: () => void; onGravado: () => void }> = ({ venda, preparo, apoio, onFechar, onGravado }) => {
+export const Fechamento: React.FC<{ venda: Linha; preparo: Preparo; apoio: Apoio; onFechar: () => void; onGravado: () => void; onToast?: (m: string) => void }> = ({ venda, preparo, apoio, onFechar, onGravado, onToast }) => {
   const [parcelas, setParcelas] = useState<Parcela[]>(preparo.parcelas);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const soma = r2(parcelas.reduce((s, p) => s + num(p.valor), 0));
 
+  const idx = (p: Parcela) => parcelas.findIndex((x) => x.nr === p.nr);
   const editar = (i: number, campos: Partial<Parcela>) => setParcelas((ps) => ps.map((p, k) => (k === i ? { ...p, ...campos, status: 'D' } : p)));
 
   const refazer = async () => {
@@ -95,33 +96,43 @@ export const Fechamento: React.FC<{ venda: Linha; preparo: Preparo; apoio: Apoio
         </div>
       </div>
       <div className={`${LABEL_CLASS} mt-3 mb-1`}>Parcelamento:</div>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="text-stone-500 border-b border-stone-200 dark:border-stone-800">
-            <th className="py-1.5 w-16">Parcela</th>
-            <th className="py-1.5">Vencimento</th>
-            <th className="py-1.5">Valor</th>
-            <th className="py-1.5">Banco</th>
-          </tr>
-        </thead>
-        <tbody>
-          {parcelas.map((p, i) => (
-            <tr key={p.nr} className="border-b border-stone-100 dark:border-stone-800/70">
-              <td className="py-1 text-center font-semibold">
-                {p.nr}
-                {p.status === 'D' && <span className="ml-1 text-[10px] text-amber-600" title="Digitada">✎</span>}
-              </td>
-              <td className="py-1 px-1">
-                <DateField value={p.vencimento} onChange={(v) => editar(i, { vencimento: v })} className={INPUT_CLASS} />
-              </td>
-              <td className="py-1 px-1">
-                <NumberField scale={2} value={p.valor} className={`${INPUT_CLASS} w-full`} onChange={(v) => editar(i, { valor: num(v) })} />
-              </td>
-              <td className="py-1 px-1">
+      <div className="h-[40vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
+        <Grade<Parcela & Linha>
+          nome="vendas.parcelas"
+          onToast={onToast}
+          chave="nr"
+          linhas={parcelas as (Parcela & Linha)[]}
+          colunas={[
+            {
+              chave: 'nr',
+              titulo: 'Parcela',
+              largura: 70,
+              alinhar: 'centro',
+              render: (p) => (
+                <b>
+                  {p.nr}
+                  {p.status === 'D' && <span className="ml-1 text-[10px] text-amber-600" title="Digitada">✎</span>}
+                </b>
+              ),
+            },
+            { chave: 'vencimento', titulo: 'Vencimento', largura: 160, alinhar: 'centro', rodape: <span className="text-stone-500 whitespace-nowrap">Soma das parcelas:</span>, render: (p) => <DateField value={p.vencimento} onChange={(v) => editar(idx(p), { vencimento: v })} className={INPUT_CLASS} /> },
+            {
+              chave: 'valor',
+              titulo: 'Valor',
+              largura: 140,
+              alinhar: 'dir',
+              rodape: <span className={`font-mono ${Math.abs(soma - preparo.total) >= 0.005 ? 'text-rose-600' : 'text-emerald-700'}`}>{moeda(soma)}</span>,
+              render: (p) => <NumberField scale={2} value={p.valor} className={`${INPUT_CLASS} w-full`} onChange={(v) => editar(idx(p), { valor: num(v) })} />,
+            },
+            {
+              chave: 'id_banco',
+              titulo: 'Banco',
+              largura: 180,
+              render: (p) => (
                 <select
                   className={`${INPUT_CLASS} w-full`}
                   value={p.id_banco || ''}
-                  onChange={(e) => editar(i, { id_banco: Number(e.target.value) || 0, banco: apoio.bancos.find((b) => String(b.id) === e.target.value)?.apelido ?? '' })}
+                  onChange={(e) => editar(idx(p), { id_banco: Number(e.target.value) || 0, banco: apoio.bancos.find((b) => String(b.id) === e.target.value)?.apelido ?? '' })}
                 >
                   <option value="">—</option>
                   {apoio.bancos.map((b) => (
@@ -130,20 +141,11 @@ export const Fechamento: React.FC<{ venda: Linha; preparo: Preparo; apoio: Apoio
                     </option>
                   ))}
                 </select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={2} className="py-2 text-right font-semibold text-stone-500">
-              Soma das parcelas:
-            </td>
-            <td className={`py-2 px-3 text-right font-mono font-bold ${Math.abs(soma - preparo.total) >= 0.005 ? 'text-rose-600' : 'text-emerald-700'}`}>{moeda(soma)}</td>
-            <td />
-          </tr>
-        </tfoot>
-      </table>
+              ),
+            },
+          ]}
+        />
+      </div>
       {confirmar && (
         <ConfirmDialog
           titulo="Confirme a operação"

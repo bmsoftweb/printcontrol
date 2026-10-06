@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Download, DownloadCloud, Eraser, Filter, Gauge, ListPlus, Pencil, RefreshCw, Save, Search, Send, Trash2 } from 'lucide-react';
+import { BotaoAcao } from '../../components/MenuAcoes';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import type { OpcaoRef, RegistroCrud, ResourceDef } from '../../types';
 import { api, deleteRecord, updateRecord } from '../../services/api';
 import { Janela } from '../../components/Janela';
@@ -154,13 +156,11 @@ export const AbaPreLeituras: React.FC<Props> = ({ resources, onToast, onVoltar, 
       <div className="flex-1 flex min-h-0">
         <div className="w-[300px] shrink-0 flex flex-col border-r border-stone-200 dark:border-stone-800">
           <div className="px-3 py-2 text-xs font-semibold text-stone-600 dark:text-stone-300 border-b border-stone-200 dark:border-stone-800">Pré-Leituras</div>
-          <Grade colunas={colLotes} linhas={lotes} selecionada={loteId ?? undefined} onSelecionar={(r) => setLoteId(r.id)} carregando={carregando} vazio="Nenhum lote gerado." compacta />
+          <Grade nome="locacoes.preLotes" colunas={colLotes} linhas={lotes} selecionada={loteId ?? undefined} onSelecionar={(r) => setLoteId(r.id)} carregando={carregando} vazio="Nenhum lote gerado." onToast={onToast} />
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-stone-200 dark:border-stone-800">
             <span className="text-xs font-semibold text-stone-600 dark:text-stone-300 mr-1">Leituras</span>
-            <BotaoBarra icone={Pencil} texto="Editar" disabled={!item} onClick={() => setDialogo('editar')} />
-            <BotaoBarra icone={Trash2} texto="Excluir" disabled={!item} onClick={() => setDialogo('excluir')} />
             <BotaoBarra
               icone={Download}
               texto="Capturar Leitura"
@@ -173,7 +173,6 @@ export const AbaPreLeituras: React.FC<Props> = ({ resources, onToast, onVoltar, 
                 })
               }
             />
-            <BotaoBarra icone={Filter} texto="Filtrar Contratos" disabled={!loteId} onClick={() => loteId && onFiltrarContratos(loteId)} />
             <BotaoBarra
               icone={Send}
               texto="Lançar Leituras"
@@ -187,7 +186,6 @@ export const AbaPreLeituras: React.FC<Props> = ({ resources, onToast, onVoltar, 
                 })
               }
             />
-            <BotaoBarra icone={Gauge} texto="Listar Leituras" disabled={!item} onClick={() => setDialogo('snmp')} />
             <BotaoBarra
               icone={DownloadCloud}
               texto="Capturar Todas"
@@ -200,13 +198,36 @@ export const AbaPreLeituras: React.FC<Props> = ({ resources, onToast, onVoltar, 
                 })
               }
             />
+            <MaisAcoes
+              itens={[
+                { icone: Filter, titulo: 'Filtrar Contratos', disabled: !loteId, onClick: () => loteId && onFiltrarContratos(loteId) },
+                { icone: Gauge, titulo: 'Listar Leituras', disabled: !item, onClick: () => setDialogo('snmp') },
+              ]}
+            />
           </div>
-          <Grade colunas={colItens} linhas={itens} selecionada={itemId ?? undefined} onSelecionar={(r) => setItemId(r.id)} onDuploClique={() => setDialogo('editar')} carregando={carregandoItens} vazio="Nenhuma leitura neste lote." compacta />
+          <Grade
+            nome="locacoes.preItens"
+            colunas={colItens}
+            linhas={itens}
+            selecionada={itemId ?? undefined}
+            onSelecionar={(r) => setItemId(r.id)}
+            onDuploClique={() => setDialogo('editar')}
+            carregando={carregandoItens}
+            vazio="Nenhuma leitura neste lote."
+            onToast={onToast}
+            acoes={(r) => (
+              <span className="inline-flex gap-1">
+                <BotaoAcao icone={Pencil} titulo="Editar" descricao="Altera a pré-leitura" onClick={() => (setItemId(r.id), setDialogo('editar'))} />
+                <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui a pré-leitura do lote" tom="perigo" onClick={() => (setItemId(r.id), setDialogo('excluir'))} />
+              </span>
+            )}
+          />
         </div>
       </div>
 
       {dialogo === 'gerar' && (
         <GerarPreLeituras
+          onToast={onToast}
           onFechar={() => setDialogo(null)}
           onGravado={(id, n) => {
             setDialogo(null);
@@ -241,13 +262,13 @@ export const AbaPreLeituras: React.FC<Props> = ({ resources, onToast, onVoltar, 
           onCancelar={() => setDialogo(null)}
         />
       )}
-      {dialogo === 'snmp' && item && <HistoricoSnmp nrSerie={item.nr_serie ?? ''} onFechar={() => setDialogo(null)} />}
+      {dialogo === 'snmp' && item && <HistoricoSnmp nrSerie={item.nr_serie ?? ''} onFechar={() => setDialogo(null)} onToast={onToast} />}
     </div>
   );
 };
 
 /** Diálogo "Gerar Pré-Leituras": seleciona os contratos ativos e grava um lote novo */
-const GerarPreLeituras: React.FC<{ onFechar: () => void; onGravado: (id: number, gravadas: number) => void }> = ({ onFechar, onGravado }) => {
+const GerarPreLeituras: React.FC<{ onFechar: () => void; onGravado: (id: number, gravadas: number) => void; onToast: (m: string) => void }> = ({ onFechar, onGravado, onToast }) => {
   const [data, setData] = useState(hoje());
   const [dia, setDia] = useState(0);
   const [cliente, setCliente] = useState('');
@@ -360,7 +381,14 @@ const GerarPreLeituras: React.FC<{ onFechar: () => void; onGravado: (id: number,
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} />}
       <div className="text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">Impressoras Selecionadas</div>
       <div className="flex flex-col h-[50vh] border border-stone-200 dark:border-stone-800 rounded-lg">
-        <Grade colunas={colunas} linhas={linhas ?? []} chave="id_contrato" vazio={linhas ? 'Nenhum contrato ativo com estes filtros.' : 'Escolha os filtros e clique em Selecionar.'} compacta />
+        <Grade
+          nome="locacoes.preSelecao"
+          colunas={colunas}
+          linhas={linhas ?? []}
+          chave="id_contrato"
+          vazio={linhas ? 'Nenhum contrato ativo com estes filtros.' : 'Escolha os filtros e clique em Selecionar.'}
+          onToast={onToast}
+        />
       </div>
     </Janela>
   );

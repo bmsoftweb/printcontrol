@@ -399,7 +399,7 @@ const Void: React.FC<{ peca: RegistroCrud; onFechar: () => void; onGravado: () =
 };
 
 /** OS Pendentes: pedidos dos clientes (Área do Cliente) → Gerar OS */
-const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | null, msg: string) => void }> = ({ onFechar, onGerado }) => {
+const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | null, msg: string) => void; onToast: (msg: string) => void }> = ({ onFechar, onGerado, onToast }) => {
   const [lista, setLista] = useState<any[] | null>(null);
   const [desmarcados, setDesmarcados] = useState<Set<number>>(new Set());
   const [gerando, setGerando] = useState(false);
@@ -487,7 +487,7 @@ const Pendentes: React.FC<{ onFechar: () => void; onGerado: (ultima: number | nu
     >
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mb-3" />}
       <div className="h-[55vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg">
-        <Grade colunas={colunas} linhas={lista ?? []} carregando={!lista} selecionado={sel ?? undefined} onSelecionar={(r) => setSel(r.id)} onDuploClique={(r) => alternar(r.id)} vazio="Nenhuma OS pendente." />
+        <Grade nome="os.pendentes" onToast={onToast} colunas={colunas} linhas={lista ?? []} carregando={!lista} selecionado={sel ?? undefined} onSelecionar={(r) => setSel(r.id)} onDuploClique={(r) => alternar(r.id)} vazio="Nenhuma OS pendente." />
       </div>
     </Janela>
   );
@@ -623,6 +623,7 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
     {
       chave: 'flag_impressao',
       titulo: <Printer className="w-3.5 h-3.5 inline" />,
+      rotulo: 'Marcar p/ imprimir',
       dica: 'Marque para Imprimir',
       largura: 48,
       alinhar: 'centro',
@@ -636,6 +637,7 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
     {
       chave: 'os_tipo',
       titulo: '',
+      rotulo: 'Ícone do tipo',
       largura: 60,
       alinhar: 'centro',
       render: (r) => {
@@ -649,29 +651,24 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
         );
       },
     },
-    { chave: 'id_cliente', titulo: 'ID cli', largura: 70, alinhar: 'dir' },
+    { chave: 'id_cliente', titulo: 'ID cli', largura: 70, alinhar: 'dir', oculta: true },
     { chave: 'cliente_nome', titulo: 'Cliente', largura: 180 },
-    { chave: 'id_equip', titulo: 'ID Equip', largura: 70, alinhar: 'dir' },
+    { chave: 'id_equip', titulo: 'ID Equip', largura: 70, alinhar: 'dir', oculta: true },
     { chave: 'marca_descricao', titulo: 'Marca', largura: 100 },
     { chave: 'modelo', titulo: 'Modelo', largura: 100 },
-    { chave: 'setor', titulo: 'Setor', largura: 100 },
+    { chave: 'setor', titulo: 'Setor', largura: 100, oculta: true },
     { chave: 'obs', titulo: 'Observação', largura: 150 },
     { chave: 'nome_req', titulo: 'Requisitado por:', largura: 120 },
     { chave: 'data_os', titulo: 'Data OS', largura: 95, alinhar: 'centro', render: (r) => dataBR(r.data_os) },
-    { chave: 'data_execucao', titulo: 'Execução', largura: 95, alinhar: 'centro', render: (r) => dataBR(r.data_execucao) },
+    { chave: 'data_execucao', titulo: 'Execução', largura: 95, alinhar: 'centro', oculta: true, render: (r) => dataBR(r.data_execucao) },
     { chave: 'defeito_cliente', titulo: 'Relatado pelo Cliente:', largura: 300 },
-    { chave: 'defeito_constatado', titulo: 'Constatado', largura: 300 },
-    { chave: 'servico_realizado', titulo: 'Serviço Realizado', largura: 300 },
-    { chave: 'obs_interna', titulo: 'Observação Interna', largura: 300 },
-    { chave: 'id_usuario_inclusao', titulo: 'Incluído por:', largura: 90, render: (r) => r.usuario_nome || r.id_usuario_inclusao },
-    ...VALORES.map(([c, t]): ColunaGrade<any> => ({ chave: c, titulo: t, largura: 110, alinhar: 'dir', render: (r) => valorBR(r[c]) })),
-    {
-      chave: 'acoes',
-      fixa: true,
-      titulo: 'Ações',
-      largura: 60,
-      alinhar: 'centro',
-      render: (r) => (
+    { chave: 'defeito_constatado', titulo: 'Constatado', largura: 300, oculta: true },
+    { chave: 'servico_realizado', titulo: 'Serviço Realizado', largura: 300, oculta: true },
+    { chave: 'obs_interna', titulo: 'Observação Interna', largura: 300, oculta: true },
+    { chave: 'id_usuario_inclusao', titulo: 'Incluído por:', largura: 90, oculta: true, render: (r) => r.usuario_nome || r.id_usuario_inclusao },
+    ...VALORES.map(([c, t]): ColunaGrade<any> => ({ chave: c, titulo: t, largura: 110, alinhar: 'dir', oculta: c !== 'valor_total_liquido', render: (r) => valorBR(r[c]) })),
+  ];
+  const acoesOs = (r: any) => (
         <MenuAcoes>
           <BotaoAcao icone={Play} titulo="Executar" descricao="Passa a OS para Executando" onClick={() => executarOs(r)} />
           <BotaoAcao icone={CircleCheck} titulo="Finalizar" descricao="Data de execução, defeito constatado e serviço realizado" tom="verde" onClick={() => setFinalizando(r)} />
@@ -680,26 +677,20 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
           <BotaoAcao icone={Pencil} titulo="Editar" descricao="Alterar a OS" onClick={() => setFormOs({ os: r })} />
           <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Excluir a OS e as peças" tom="perigo" onClick={() => excluirOs(r)} />
         </MenuAcoes>
-      ),
-    },
-  ];
+  );
 
+  const totalPecas = pecas.reduce((s, p) => s + (Number(p.valor_total) || 0), 0);
   const colunasPecas: ColunaGrade<any>[] = [
     { chave: 'id_produto', titulo: 'ID Pro', largura: 70, alinhar: 'dir' },
     { chave: 'produto_descricao', titulo: 'Produto', largura: 260 },
     { chave: 'qtdade', titulo: 'Qtd.', largura: 90, alinhar: 'dir', render: (r) => valorBR(r.qtdade) },
     { chave: 'qtdade_entregue', titulo: 'Qtd.Entregue', largura: 100, alinhar: 'dir', render: (r) => valorBR(r.qtdade_entregue) },
-    { chave: 'valor_unit', titulo: 'Vlr. Unit.', largura: 100, alinhar: 'dir', render: (r) => valorBR(r.valor_unit, ',0.0000') },
-    { chave: 'valor_total', titulo: 'Vlr. Total', largura: 100, alinhar: 'dir', render: (r) => valorBR(r.valor_total) },
+    { chave: 'valor_unit', titulo: 'Vlr. Unit.', largura: 100, alinhar: 'dir', render: (r) => valorBR(r.valor_unit, ',0.0000'), rodape: pecas.length ? 'Total' : undefined },
+    { chave: 'valor_total', titulo: 'Vlr. Total', largura: 100, alinhar: 'dir', render: (r) => valorBR(r.valor_total), rodape: pecas.length ? <span className="text-blue-900 dark:text-blue-300">R$ {valorBR(totalPecas)}</span> : undefined },
     { chave: 'obs', titulo: 'Observação', largura: 300 },
     { chave: 'nr_serie', titulo: 'Nr. Série', largura: 120 },
-    {
-      chave: 'acoes',
-      fixa: true,
-      titulo: 'Ações',
-      largura: 60,
-      alinhar: 'centro',
-      render: (p) => (
+  ];
+  const acoesPeca = (p: any) => (
         <MenuAcoes>
           <BotaoAcao icone={Tag} titulo="VOID" descricao="Atribuir a etiqueta VOID (nº de série)" onClick={() => (p.nr_serie ? setErro('Nr. série já atribuido!') : setVoidPeca(p))} />
           <BotaoAcao
@@ -750,11 +741,8 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
             }
           />
         </MenuAcoes>
-      ),
-    },
-  ];
+  );
 
-  const totalPecas = pecas.reduce((s, p) => s + (Number(p.valor_total) || 0), 0);
   const precisaOs = (fn: (o: RegistroCrud) => void) => () => (os ? fn(os) : setErro('Selecione uma OS.'));
   const statusOs = os?.status;
 
@@ -788,7 +776,7 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
 
       <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-stone-900">
-        <Grade colunas={colunas} linhas={filtradas} carregando={carregando} selecionado={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setFormOs({ os: r })} vazio="Nenhuma OS neste status." />
+        <Grade nome="os.lista" onToast={onToast} acoes={acoesOs} larguraAcoes="w-16 min-w-16 max-w-16" colunas={colunas} linhas={filtradas} carregando={carregando} selecionado={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setFormOs({ os: r })} vazio="Nenhuma OS neste status." />
       </div>
 
       <div className="h-[260px] shrink-0 flex flex-col border-t-2 border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
@@ -810,6 +798,10 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
           </div>
         </div>
         <Grade
+          nome="os.pecas"
+          onToast={onToast}
+          acoes={acoesPeca}
+          larguraAcoes="w-16 min-w-16 max-w-16"
           colunas={colunasPecas}
           linhas={pecas}
           carregando={carregandoPecas}
@@ -817,17 +809,6 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
           onSelecionar={(p) => setSelPeca(p.id)}
           onDuploClique={(p) => setFormPeca({ peca: p })}
           vazio={os ? 'Nenhuma peça nesta OS.' : 'Selecione uma OS.'}
-          rodape={
-            pecas.length ? (
-              <tr>
-                <td colSpan={5} className="px-2.5 py-1.5 text-right text-xs font-semibold text-stone-500 border-t border-stone-200 dark:border-stone-800">
-                  Total
-                </td>
-                <td className="px-2.5 py-1.5 text-right text-xs font-bold text-blue-900 dark:text-blue-300 border-t border-stone-200 dark:border-stone-800 whitespace-nowrap">R$ {valorBR(totalPecas)}</td>
-                <td colSpan={3} className="border-t border-stone-200 dark:border-stone-800" />
-              </tr>
-            ) : undefined
-          }
         />
       </div>
 
@@ -882,6 +863,7 @@ export const TelaOS: React.FC<TelaProps> = ({ usuario, onToast, refreshToken }) 
       )}
       {pendentes && (
         <Pendentes
+          onToast={onToast}
           onFechar={() => setPendentes(false)}
           onGerado={(ultima, msg) => {
             onToast(msg);

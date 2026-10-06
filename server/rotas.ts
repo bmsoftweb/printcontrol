@@ -7,6 +7,7 @@ import { createFaturamentoRouter } from './faturamento.js';
 import { createOsRouter } from './os.js';
 import { createVendasRouter } from './vendas.js';
 import { createAreaClienteRouter } from './areaCliente.js';
+import { createPainelRouter } from './painel.js';
 
 /**
  * Routers de cada módulo (um arquivo server/<módulo>.ts por grupo de telas do PrintControl).
@@ -22,6 +23,7 @@ export const ROTAS_MODULOS: (() => Router)[] = [
   createFaturamentoRouter,
   createOsRouter,
   createVendasRouter,
+  createPainelRouter,
 ];
 
 /** Rotas da Área do Cliente, montadas em /api/cliente (res.locals.cliente, grupoId) */

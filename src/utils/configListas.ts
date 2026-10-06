@@ -46,11 +46,26 @@ export async function lerConfigLista(recurso: string): Promise<ConfigLista> {
   return cache?.[recurso] || {};
 }
 
-/** Guarda a preferência e grava o JSON inteiro depois de um respiro, para não gravar a cada pixel */
-export function salvarConfigLista(recurso: string, config: ConfigLista) {
+/** Quem espera o resultado da próxima gravação (agrupadas pelo respiro) */
+let aguardando: { ok: () => void; falhou: (e: Error) => void }[] = [];
+
+/**
+ * Guarda a preferência e grava o JSON inteiro depois de um respiro, para não gravar a cada pixel.
+ * A promessa diz se a gravação deu certo (ex.: banco sem a coluna usuarios.config_listas).
+ */
+export function salvarConfigLista(recurso: string, config: ConfigLista): Promise<void> {
   cache = { ...(cache || {}), [recurso]: config };
   if (gravacao) clearTimeout(gravacao);
-  gravacao = setTimeout(() => saveConfigListas(cache || {}).catch(() => {}), 800);
+  const promessa = new Promise<void>((ok, falhou) => aguardando.push({ ok, falhou }));
+  gravacao = setTimeout(() => {
+    const quem = aguardando;
+    aguardando = [];
+    saveConfigListas(cache || {}).then(
+      () => quem.forEach((q) => q.ok()),
+      (e) => quem.forEach((q) => q.falhou(e)),
+    );
+  }, 800);
+  return promessa;
 }
 
 export function limparConfigListas() {

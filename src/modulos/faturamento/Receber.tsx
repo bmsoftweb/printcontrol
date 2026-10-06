@@ -174,7 +174,7 @@ const Retorno: React.FC<{ onVoltar: () => void; onToast: (m: string) => void }> 
     { chave: 'obs', titulo: 'Obs.', grupo: 'Processamento' },
     { chave: 'ocorrencia', titulo: 'Código', grupo: 'Ocorrência', alinhar: 'centro' },
     { chave: 'ocorrenciaDescricao', titulo: 'Descrição', grupo: 'Ocorrência' },
-    { chave: 'nomePagador', titulo: 'Cliente', grupo: 'Título' },
+    { chave: 'nomePagador', titulo: 'Cliente', grupo: 'Título', fixa: true },
     { chave: 'cnpj', titulo: 'CNPJ', grupo: 'Título' },
     v('valorPago', 'Valor Pago', 'Título', true),
     { chave: 'nossoNumero', titulo: 'Nosso Nr.', grupo: 'Título' },
@@ -220,7 +220,7 @@ const Retorno: React.FC<{ onVoltar: () => void; onToast: (m: string) => void }> 
         {arquivo && <span className="text-[11px] text-stone-500">{arquivo.nome} — {registros.length} título(s)</span>}
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3 shrink-0" />}
-      <Grade chave="linha" colunas={colunas} linhas={registros.map((r, i) => ({ ...r, linha: i }))} vazio="Escolha o banco e envie o arquivo de retorno." />
+      <Grade nome="receber.retorno" onToast={onToast} chave="linha" colunas={colunas} linhas={registros.map((r, i) => ({ ...r, linha: i }))} vazio="Escolha o banco e envie o arquivo de retorno." />
       {confirmar && (
         <ConfirmDialog
           titulo="Processar retorno"
@@ -315,6 +315,7 @@ export const TelaReceber: React.FC<TelaProps> = ({ onToast, refreshToken, empres
     {
       chave: 'baixar',
       titulo: '',
+      rotulo: 'Baixar / Estornar',
       alinhar: 'centro',
       render: (r) =>
         r.status === 'A' ? (
@@ -330,9 +331,9 @@ export const TelaReceber: React.FC<TelaProps> = ({ onToast, refreshToken, empres
     { chave: 'empresa_apelido', titulo: 'Empresa' },
     { chave: 'status', titulo: 'Status', alinhar: 'centro', render: (r) => <SeloStatusNota status={r.status} atraso={r.atraso} /> },
     { chave: 'id_cliente', titulo: 'ID/Cliente', alinhar: 'dir' },
-    { chave: 'nome', titulo: `Nome${ordem === 'N' ? ' ▲' : ''}`, aoClicarTitulo: ordenar('N') },
-    { chave: 'data_vencimento', titulo: `Data Vencto.${ordem === 'V' ? ' ▲' : ''}`, alinhar: 'centro', aoClicarTitulo: ordenar('V'), render: (r) => data(r.data_vencimento) },
-    { chave: 'data_baixa', titulo: `Data Recbto.${ordem === 'R' ? ' ▲' : ''}`, alinhar: 'centro', aoClicarTitulo: ordenar('R'), render: (r) => data(r.data_baixa) },
+    { chave: 'nome', titulo: 'Nome', fixa: true, aoClicarTitulo: ordenar('N'), ordenada: ordem === 'N' ? 'asc' : null },
+    { chave: 'data_vencimento', titulo: 'Data Vencto.', alinhar: 'centro', aoClicarTitulo: ordenar('V'), ordenada: ordem === 'V' ? 'asc' : null, render: (r) => data(r.data_vencimento) },
+    { chave: 'data_baixa', titulo: 'Data Recbto.', alinhar: 'centro', aoClicarTitulo: ordenar('R'), ordenada: ordem === 'R' ? 'asc' : null, render: (r) => data(r.data_baixa) },
     { chave: 'total_liquido', titulo: 'Total NF', alinhar: 'dir', render: (r) => `R$ ${moeda(r.total_liquido)}`, rodape: `R$ ${moeda(total)}` },
     { chave: 'serie', titulo: 'Série', alinhar: 'centro' },
     { chave: 'numero', titulo: 'Nr. NF', alinhar: 'dir' },
@@ -403,6 +404,8 @@ export const TelaReceber: React.FC<TelaProps> = ({ onToast, refreshToken, empres
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3 shrink-0" />}
       <Grade
+        nome="receber.titulos"
+        onToast={onToast}
         colunas={colunas}
         linhas={linhas}
         selecionado={sel?.id}

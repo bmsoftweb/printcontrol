@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Calculator, ClipboardCheck, FilePlus2, Gauge, Layers, ListChecks, Pencil, Plus, Receipt, RefreshCw, Trash2, Truck, Users, X } from 'lucide-react';
+import { Calculator, ClipboardCheck, FilePlus2, Gauge, Layers, ListChecks, Pencil, Plus, Power, PowerOff, Receipt, RefreshCw, Trash2, Truck, Users, X } from 'lucide-react';
 import type { OpcaoRef, RegistroCrud, ResourceDef } from '../../types';
 import { api, createRecord, deleteRecord, updateRecord } from '../../services/api';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { AvisoErro } from '../../components/AvisoErro';
 import { Toggle } from '../../components/Toggle';
 import { BotaoAcao } from '../../components/MenuAcoes';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import { INPUT_CLASS } from '../../utils/formStyles';
 import { BotaoBarra, Coluna, Grade, JanelaForm, Selo, dataBr, inteiro, moeda } from './ui';
 import { Agrupamento, Conferencia, HistoricoSnmp } from './dialogos';
@@ -36,6 +37,7 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
   const [lookups, setLookups] = useState<Record<string, OpcaoRef[]>>({});
   const [editando, setEditando] = useState<{ record: RegistroCrud | null } | null>(null);
   const [excluindo, setExcluindo] = useState<RegistroCrud | null>(null);
+  const [ativando, setAtivando] = useState<RegistroCrud | null>(null);
   const [dialogo, setDialogo] = useState<null | 'agrupamento' | 'conferencia' | 'os' | 'snmp'>(null);
   const [recarga, setRecarga] = useState(0);
 
@@ -64,16 +66,6 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
     return () => clearTimeout(t);
   }, [carregar, refreshToken, recarga]);
 
-  /** Toggles da grade (duplo clique no Delphi): grava só a coluna, passando pelas validações do contrato */
-  const alternar = async (row: RegistroCrud, campo: string, valor: unknown) => {
-    try {
-      await updateRecord('locacao_contratos', row.id, { [campo]: valor });
-      setLinhas((ls) => ls.map((l) => (l.id === row.id ? { ...l, [campo]: campo === 'rede_usb' ? valor : valor ? 'S' : 'N' } : l)));
-    } catch (e: any) {
-      setErro(e.message);
-    }
-  };
-
   const salvar = async (payload: RegistroCrud) => {
     let id = editando?.record?.id;
     if (id) await updateRecord('locacao_contratos', id, payload);
@@ -87,28 +79,17 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
   };
 
   const colunas: Coluna<RegistroCrud>[] = [
+    { titulo: 'Nome', campo: 'cliente_nome', largura: 220, fixa: true },
     { titulo: 'G', alinhar: 'c', render: (r) => (r.codigo_grupo ? <Selo texto={r.codigo_grupo} cor="#4682B4" /> : null) },
-    { titulo: 'Ativo', alinhar: 'c', render: (r) => <Toggle size="sm" checked={r.ativo === 'S'} onChange={(v) => alternar(r, 'ativo', v)} /> },
-    { titulo: 'ID/Cliente', campo: 'id_cliente', alinhar: 'c' },
-    { titulo: 'Nome', campo: 'cliente_nome', largura: 220 },
+    { titulo: 'Ativo', alinhar: 'c', render: (r) => (r.ativo === 'S' ? <Selo texto="SIM" /> : <Selo texto="NÃO" />) },
+    { titulo: 'ID/Cliente', campo: 'id_cliente', alinhar: 'c', oculta: true },
     { titulo: 'Id/Equip', campo: 'id_equip', alinhar: 'c' },
     { titulo: 'Nr.Série', campo: 'nr_serie', largura: 120 },
-    { titulo: 'Color', alinhar: 'c', render: (r) => <Toggle size="sm" checked={r.color === 'S'} onChange={(v) => alternar(r, 'color', v)} /> },
-    {
-      titulo: 'Rede/USB',
-      alinhar: 'c',
-      render: (r) => (
-        <Selo
-          texto={r.rede_usb === 'R' ? 'REDE' : 'USB'}
-          cor={r.rede_usb === 'R' ? '#2E8B57' : '#FFD700'}
-          title="Clique para alternar Rede/USB"
-          onClick={() => alternar(r, 'rede_usb', r.rede_usb === 'R' ? 'U' : 'R')}
-        />
-      ),
-    },
+    { titulo: 'Color', alinhar: 'c', render: (r) => (r.color === 'S' ? <Selo texto="COR" cor="#4682B4" /> : <Selo texto="P&B" />) },
+    { titulo: 'Rede/USB', alinhar: 'c', render: (r) => <Selo texto={r.rede_usb === 'R' ? 'REDE' : 'USB'} cor={r.rede_usb === 'R' ? '#2E8B57' : '#FFD700'} /> },
     { titulo: 'Equipamento', campo: 'equip_descricao', largura: 140 },
     { titulo: 'Vendedor', campo: 'vendedor_nome' },
-    { titulo: 'Grupo', campo: 'codigo_grupo', alinhar: 'c' },
+    { titulo: 'Grupo', campo: 'codigo_grupo', alinhar: 'c', oculta: true },
     { titulo: 'Setor', campo: 'setor' },
     { titulo: 'Dia Leitura', campo: 'dia_leitura', alinhar: 'c' },
     { titulo: 'Dia Vencto.', campo: 'dia_vencimento', alinhar: 'c' },
@@ -118,33 +99,38 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
     { titulo: 'Valor Excedente R$', alinhar: 'd', render: (r) => moeda(r.valor_excedente, 5) },
     { titulo: 'Data Contrato', alinhar: 'c', render: (r) => dataBr(r.data_contrato) },
     { titulo: 'Validade', alinhar: 'c', render: (r) => dataBr(r.data_vencimento) },
-    { titulo: 'Série / NF', alinhar: 'c', render: (r) => r.serie_nf ?? '' },
+    { titulo: 'Série / NF', alinhar: 'c', render: (r) => r.serie_nf ?? '', oculta: true },
     { titulo: 'Observações', campo: 'obs', largura: 200 },
-    { titulo: 'ID/Contrato', campo: 'id', alinhar: 'c' },
-    {
-      titulo: 'Ações',
-      alinhar: 'c',
-      render: (r) => (
-        <span className="inline-flex gap-1">
-          <BotaoAcao icone={Pencil} titulo="Editar" descricao="Altera o contrato" onClick={() => setEditando({ record: paraForm(r) })} />
-          <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui o contrato" tom="perigo" onClick={() => setExcluindo(r)} />
-        </span>
-      ),
-    },
+    { titulo: 'ID/Contrato', campo: 'id', alinhar: 'c', oculta: true },
   ];
+
+  const acoes = (r: RegistroCrud) => (
+    <span className="inline-flex gap-1">
+      <BotaoAcao icone={Pencil} titulo="Editar" descricao="Altera o contrato" onClick={() => setEditando({ record: paraForm(r) })} />
+      {r.ativo === 'S' ? (
+        <BotaoAcao icone={PowerOff} titulo="Inativar" descricao="Inativa o contrato" onClick={() => setAtivando(r)} />
+      ) : (
+        <BotaoAcao icone={Power} titulo="Ativar" descricao="Ativa o contrato" tom="verde" onClick={() => setAtivando(r)} />
+      )}
+      <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui o contrato" tom="perigo" onClick={() => setExcluindo(r)} />
+    </span>
+  );
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
         <BotaoBarra icone={FilePlus2} texto="Novo" primario onClick={() => setEditando({ record: null })} />
         <BotaoBarra icone={RefreshCw} texto="Atualizar" onClick={() => setRecarga((r) => r + 1)} />
-        <BotaoBarra icone={Layers} texto="Agrupamento" onClick={() => setDialogo('agrupamento')} title="Agrupamento de leituras (franquia compartilhada / valor mínimo)" />
-        <BotaoBarra icone={Users} texto="Vendedores" onClick={onVendedores} />
-        <BotaoBarra icone={ClipboardCheck} texto="Conferência" onClick={() => setDialogo('conferencia')} title="Leituras não realizadas no mês" />
-        <BotaoBarra icone={Truck} texto="Gerar OS Entrega" disabled={!sel} onClick={() => setDialogo('os')} />
         <BotaoBarra icone={ListChecks} texto="Pré-Leituras" onClick={onPreLeituras} />
-        <span className="w-px h-6 bg-stone-300 dark:bg-stone-700 mx-1" />
         <BotaoBarra icone={Receipt} texto="Faturamento" onClick={() => onNavigate('faturamento')} />
+        <MaisAcoes
+          itens={[
+            { icone: Layers, titulo: 'Agrupamento', onClick: () => setDialogo('agrupamento') },
+            { icone: Users, titulo: 'Vendedores', onClick: onVendedores },
+            { icone: ClipboardCheck, titulo: 'Conferência', onClick: () => setDialogo('conferencia') },
+            { icone: Truck, titulo: 'Gerar OS Entrega', disabled: !sel, onClick: () => setDialogo('os') },
+          ]}
+        />
       </div>
       <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-stone-200 dark:border-stone-800">
         <select
@@ -183,7 +169,20 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
         <span className="ml-auto text-[11px] text-stone-500">{linhas.length} contrato(s)</span>
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-2" />}
-      <Grade colunas={colunas} linhas={linhas} selecionada={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setEditando({ record: paraForm(r) })} carregando={carregando} vazio="Nenhum contrato." rolarParaSelecionada />
+      <Grade
+        nome="locacoes.contratos"
+        colunas={colunas}
+        linhas={linhas}
+        selecionada={selId ?? undefined}
+        onSelecionar={(r) => setSelId(r.id)}
+        onDuploClique={(r) => setEditando({ record: paraForm(r) })}
+        carregando={carregando}
+        vazio="Nenhum contrato."
+        rolarParaSelecionada
+        acoes={acoes}
+        larguraAcoes="w-28 min-w-28 max-w-28"
+        onToast={onToast}
+      />
 
       {sel && <PainelLeituras contrato={sel} resources={resources} onSnmp={() => setDialogo('snmp')} onToast={onToast} />}
 
@@ -207,6 +206,21 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
             setRecarga((r) => r + 1);
           }}
           onCancelar={() => setExcluindo(null)}
+        />
+      )}
+      {ativando && (
+        <ConfirmDialog
+          titulo={`${ativando.ativo === 'S' ? 'Inativar' : 'Ativar'} o contrato ${ativando.id}?`}
+          mensagem={`${ativando.cliente_nome ?? ''} — ${ativando.nr_serie ?? ''}`}
+          confirmar={ativando.ativo === 'S' ? 'Inativar' : 'Ativar'}
+          tom={ativando.ativo === 'S' ? 'perigo' : 'normal'}
+          onConfirmar={async () => {
+            const ativo = ativando.ativo === 'S' ? 'N' : 'S';
+            await updateRecord('locacao_contratos', ativando.id, { ativo: ativo === 'S' ? 1 : 0 });
+            setLinhas((ls) => ls.map((l) => (l.id === ativando.id ? { ...l, ativo } : l)));
+            setAtivando(null);
+          }}
+          onCancelar={() => setAtivando(null)}
         />
       )}
       {dialogo === 'os' && sel && (
@@ -235,6 +249,7 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
       )}
       {dialogo === 'conferencia' && (
         <Conferencia
+          onToast={onToast}
           onFechar={() => setDialogo(null)}
           onIrPara={(id) => {
             setDialogo(null);
@@ -243,7 +258,7 @@ export const AbaContratos: React.FC<Props> = ({ resources, onToast, refreshToken
           }}
         />
       )}
-      {dialogo === 'snmp' && sel && <HistoricoSnmp nrSerie={sel.nr_serie ?? ''} onFechar={() => setDialogo(null)} />}
+      {dialogo === 'snmp' && sel && <HistoricoSnmp nrSerie={sel.nr_serie ?? ''} onFechar={() => setDialogo(null)} onToast={onToast} />}
     </div>
   );
 };
@@ -323,16 +338,6 @@ const PainelLeituras: React.FC<{ contrato: RegistroCrud; resources: ResourceDef[
     { titulo: 'Valor Total (Exced.)', alinhar: 'd', render: (r) => moeda(r.valor_copia_total_excedente) },
     { titulo: 'G', alinhar: 'c', render: (r) => (r.grupo_acertado === 'S' ? <Selo texto="A" cor="#4682B4" title="Acertado no agrupamento" /> : null) },
     { titulo: 'Observações', campo: 'obs' },
-    {
-      titulo: 'Ações',
-      alinhar: 'c',
-      render: (r) => (
-        <span className="inline-flex gap-1">
-          <BotaoAcao icone={Pencil} titulo="Editar" descricao="Altera a leitura" onClick={() => setEditando({ record: r })} />
-          <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui a leitura" tom="perigo" onClick={() => setExcluindo(r)} />
-        </span>
-      ),
-    },
   ];
 
   const sel = linhas.find((l) => l.id === selId);
@@ -356,7 +361,23 @@ const PainelLeituras: React.FC<{ contrato: RegistroCrud; resources: ResourceDef[
         <BotaoBarra icone={Gauge} texto="Leituras" onClick={onSnmp} title="Histórico das leituras automáticas (SNMP) do equipamento" />
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-2" />}
-      <Grade colunas={colunas} linhas={linhas} selecionada={selId ?? undefined} onSelecionar={(r) => setSelId(r.id)} onDuploClique={(r) => setEditando({ record: r })} carregando={carregando} vazio="Nenhuma leitura deste contrato." compacta />
+      <Grade
+        nome="locacoes.leituras"
+        colunas={colunas}
+        linhas={linhas}
+        selecionada={selId ?? undefined}
+        onSelecionar={(r) => setSelId(r.id)}
+        onDuploClique={(r) => setEditando({ record: r })}
+        carregando={carregando}
+        vazio="Nenhuma leitura deste contrato."
+        onToast={onToast}
+        acoes={(r) => (
+          <span className="inline-flex gap-1">
+            <BotaoAcao icone={Pencil} titulo="Editar" descricao="Altera a leitura" onClick={() => setEditando({ record: r })} />
+            <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui a leitura" tom="perigo" onClick={() => setExcluindo(r)} />
+          </span>
+        )}
+      />
 
       {editando && recursoForm && (
         <JanelaForm

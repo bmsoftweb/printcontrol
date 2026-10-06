@@ -23,6 +23,7 @@ import type { OpcaoRef } from '../../types';
 import { api } from '../../services/api';
 import { BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from '../../components/Janela';
 import { CrudView } from '../../components/CrudView';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import { SelectBusca } from '../../components/SelectBusca';
 import { DateField } from '../../components/DateField';
 import { NumberField } from '../../components/NumberField';
@@ -374,6 +375,8 @@ export const TelaConsultas: React.FC<TelaProps> = ({ usuario, resources, onToast
           {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
           <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-stone-900">
             <Grade
+              nome="consultas.lista"
+              onToast={onToast}
               colunas={colunasLista}
               linhas={linhasLista}
               carregando={!lista}
@@ -454,15 +457,15 @@ export const TelaConsultas: React.FC<TelaProps> = ({ usuario, resources, onToast
               <button className={BOTAO_SECUNDARIO} onClick={() => exportar('xls')} title="Um arquivo .xls por SQL">
                 <FileSpreadsheet className="w-4 h-4" /> Excel
               </button>
-              <button className={BOTAO_SECUNDARIO} onClick={() => exportar('csv')} title="Um arquivo .csv (separado por ;) por SQL">
-                <FileSpreadsheet className="w-4 h-4" /> CSV
-              </button>
               <button className={BOTAO_SECUNDARIO} onClick={() => setPasso('cubo')} disabled={!sql1}>
                 <Grid3x3 className="w-4 h-4" /> Cubo
               </button>
-              <button className={BOTAO_SECUNDARIO} onClick={() => setPasso('grafico')} disabled={!sql1}>
-                <LineChart className="w-4 h-4" /> Gráfico
-              </button>
+              <MaisAcoes
+                itens={[
+                  { icone: FileSpreadsheet, titulo: 'CSV', onClick: () => exportar('csv') },
+                  { icone: LineChart, titulo: 'Gráfico', onClick: () => setPasso('grafico'), disabled: !sql1 },
+                ]}
+              />
             </div>
           </Barra>
           {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
@@ -482,6 +485,9 @@ export const TelaConsultas: React.FC<TelaProps> = ({ usuario, resources, onToast
           {aba && (
             <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-stone-900">
               <Grade
+                key={`${atual.id}.${aba.n}`}
+                nome={`consultas.${atual.id}.${aba.n}`}
+                onToast={onToast}
                 chave="__i"
                 colunas={aba.colunas.map((c) => ({
                   chave: c.campo,
@@ -509,19 +515,19 @@ export const TelaConsultas: React.FC<TelaProps> = ({ usuario, resources, onToast
               <button className={BOTAO_SECUNDARIO} onClick={() => setPasso('resultado')}>
                 <ChevronLeft className="w-4 h-4" /> Voltar
               </button>
-              <button className={BOTAO_SECUNDARIO} onClick={exportarCubo} disabled={!cubo}>
-                <FileSpreadsheet className="w-4 h-4" /> Excel
-              </button>
-              <button
-                className={BOTAO_SECUNDARIO}
-                onClick={() => {
-                  setPivot(atual.pivot);
-                  setPivotAplicado(atual.pivot);
-                }}
-                title="Volta à configuração gravada"
-              >
-                <RefreshCw className="w-4 h-4" /> Refazer
-              </button>
+              <MaisAcoes
+                itens={[
+                  { icone: FileSpreadsheet, titulo: 'Excel', onClick: exportarCubo, disabled: !cubo },
+                  {
+                    icone: RefreshCw,
+                    titulo: 'Refazer (configuração gravada)',
+                    onClick: () => {
+                      setPivot(atual.pivot);
+                      setPivotAplicado(atual.pivot);
+                    },
+                  },
+                ]}
+              />
               {nivel <= 'B' && (
                 <button className={BOTAO_SECUNDARIO} onClick={() => setConfigurando((x) => !x)}>
                   <Settings2 className="w-4 h-4" /> Configurar

@@ -85,3 +85,11 @@ Desenvolvimento: servidor 1 (`printcontrol_xdemo`, seed `database/seed_desenvolv
 
 Código trazido do nfeWeb em `server/nfe/` (XML, assinatura, validação XSD, SOAP, DANFE, eventos). Certificado A1 de
 `empresas_filiais.arquivo_pfx`/`senha_pfx`; ambiente e UF da empresa. Envio real à SEFAZ ainda não testado (sem certificado na base de testes).
+
+## Pré-leituras e Scan Impressoras
+
+"Capturar Leitura" / "Capturar Todas" (Locações › Pré-Leituras) buscam a última coleta do Scan Impressoras SNMP até o
+dia da leitura no banco `PRINTERS_DATABASE` (padrão `printers_000000`, mesmo host do banco de trabalho), ligando
+`impressora.numero_serie` ao nr. de série do contrato. Impressora monocromática: contador de vida (`paginas`);
+colorida: `paginas_preto` / `paginas_color`. Sem coleta, a linha fica ZERADO. "Listar Leituras" (pré-leitura e contrato)
+mostra as coletas do mesmo banco, com cliente e setor do contrato da série.

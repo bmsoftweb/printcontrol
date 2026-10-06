@@ -15,10 +15,21 @@ interface JanelaProps {
   ocupado?: boolean;
 }
 
+/** Janelas abertas, da mais antiga para a mais recente: o Esc fecha só a de cima */
+const pilha: symbol[] = [];
+
 /** Janela modal das telas dos módulos (diálogos do Delphi): título, conteúdo rolável e rodapé com botões */
 export const Janela: React.FC<JanelaProps> = ({ titulo, subtitulo, onFechar, children, rodape, largura = 'max-w-2xl', ocupado }) => {
+  const eu = React.useRef(Symbol('janela'));
   React.useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && !ocupado && onFechar();
+    const id = eu.current;
+    pilha.push(id);
+    return () => {
+      pilha.splice(pilha.indexOf(id), 1);
+    };
+  }, []);
+  React.useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && pilha[pilha.length - 1] === eu.current && !ocupado && onFechar();
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
   }, [onFechar, ocupado]);

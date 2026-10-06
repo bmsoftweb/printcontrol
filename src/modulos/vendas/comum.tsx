@@ -5,6 +5,7 @@ import { lerSessao } from '../../utils/session';
 import { Janela } from '../../components/Janela';
 import { AvisoErro } from '../../components/AvisoErro';
 import { INPUT_CLASS } from '../../utils/formStyles';
+import { GradeLista, type ColunaLista } from '../../components/GradeLista';
 
 export type Linha = Record<string, any>;
 
@@ -55,17 +56,43 @@ export const Carregando: React.FC<{ texto?: string }> = ({ texto }) => (
   </div>
 );
 
-export interface Coluna<T> {
-  chave: string;
-  titulo: React.ReactNode;
-  largura?: number;
-  alinhar?: 'esq' | 'centro' | 'dir';
-  render?: (row: T) => React.ReactNode;
-  dica?: string;
+/** Coluna das grades de Vendas: a da GradeLista com `chave` (campo e id da configuração) */
+export type Coluna<T> = Omit<ColunaLista<T>, 'id' | 'campo'> & { chave: string };
+
+/**
+ * Grade das telas de Vendas: GradeLista (menu ☰, colunas configuráveis e salvas com a chave `nome`).
+ * Com `agrupar` usa a grade antiga (GradeAgrupada): a GradeLista não tem linhas de cabeçalho/resumo de grupo.
+ */
+export function Grade<T extends Linha>({
+  nome,
+  agrupar,
+  rodape,
+  colunas,
+  ...props
+}: {
+  nome: string;
+  colunas: Coluna<T>[];
+  linhas: T[];
+  chave?: string;
+  selecionado?: unknown;
+  onSelecionar?: (row: T) => void;
+  onDuploClique?: (row: T) => void;
+  carregando?: boolean;
+  vazio?: string;
+  /** Só com agrupar (sem ele, use `rodape` nas colunas) */
+  rodape?: React.ReactNode;
+  agrupar?: { campo: string; resumo?: (linhas: T[]) => React.ReactNode };
+  classeLinha?: (row: T) => string;
+  acoes?: (row: T) => React.ReactNode;
+  larguraAcoes?: string;
+  onToast?: (msg: string) => void;
+}) {
+  if (agrupar) return <GradeAgrupada {...props} colunas={colunas} agrupar={agrupar} rodape={rodape} />;
+  return <GradeLista {...props} nome={nome} colunas={colunas.map((c) => ({ ...c, id: c.chave, campo: c.chave }))} />;
 }
 
-/** Grade somente leitura: cabeçalho fixo, linha selecionada e duplo clique */
-export function Grade<T extends Linha>({
+/** Grade somente leitura com grupos: cabeçalho fixo, linha selecionada e duplo clique */
+function GradeAgrupada<T extends Linha>({
   colunas,
   linhas,
   chave = 'id',
@@ -90,6 +117,9 @@ export function Grade<T extends Linha>({
   /** Agrupa as linhas pelo valor do campo (cabeçalho de grupo e, opcionalmente, um resumo) */
   agrupar?: { campo: string; resumo?: (linhas: T[]) => React.ReactNode };
   classeLinha?: (row: T) => string;
+  acoes?: unknown;
+  larguraAcoes?: unknown;
+  onToast?: unknown;
 }) {
   const alinhar = (a?: string) => (a === 'centro' ? 'text-center' : a === 'dir' ? 'text-right' : 'text-left');
   const linhaTr = (row: T) => {
@@ -303,7 +333,7 @@ const JanelaPesquisa: React.FC<{ tipo: 'clientes' | 'produtos'; onFechar: () => 
       <input autoFocus className={`${INPUT_CLASS} w-full mb-3`} placeholder="Digite parte do nome, referência ou o código" value={q} onChange={(e) => setQ(e.target.value)} />
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mb-2" />}
       <div className="h-[50vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
-        <Grade colunas={colunas} linhas={linhas} carregando={carregando} onDuploClique={onEscolher} onSelecionar={undefined} vazio="Nada encontrado." />
+        <Grade nome={`vendas.pesquisa.${tipo}`} colunas={colunas} linhas={linhas} carregando={carregando} onDuploClique={onEscolher} vazio="Nada encontrado." />
       </div>
       <p className="mt-2 text-[11px] text-stone-400">Duplo clique escolhe.</p>
     </Janela>

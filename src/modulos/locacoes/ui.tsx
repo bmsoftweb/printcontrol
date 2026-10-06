@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
-import { Inbox, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { OpcaoRef, RegistroCrud, ResourceDef } from '../../types';
 import { RecordForm } from '../../components/RecordForm';
+import { ColunaLista, GradeLista } from '../../components/GradeLista';
 
 // ---------------------------------------------------------------------------------------------
 // Formatação (padrão das grades do Delphi)
@@ -45,11 +46,15 @@ export const Selo: React.FC<{ texto: string; cor?: string; onClick?: () => void;
 };
 
 // ---------------------------------------------------------------------------------------------
-// Grade simples (as grades do Delphi): seleção de linha, duplo clique, colunas configuradas
+// Grade do módulo: adaptador para a GradeLista compartilhada (mesmos nomes de props das telas antigas)
 // ---------------------------------------------------------------------------------------------
 
 export interface Coluna<T> {
+  /** Id estável na configuração salva (padrão: o título) */
+  id?: string;
   titulo: React.ReactNode;
+  /** Nome no menu Colunas quando o título não é texto */
+  rotulo?: string;
   /** Campo exibido como texto (sem render) */
   campo?: keyof T & string;
   render?: (row: T) => React.ReactNode;
@@ -60,11 +65,15 @@ export interface Coluna<T> {
   negrito?: boolean;
   /** Linha de totais */
   total?: (rows: T[]) => React.ReactNode;
+  oculta?: boolean;
+  fixa?: boolean;
+  grupo?: string;
 }
 
-const ALINHAR = { e: 'text-left', c: 'text-center', d: 'text-right' };
+const ALINHAR = { e: 'esq', c: 'centro', d: 'dir' } as const;
 
 export function Grade<T extends Record<string, any>>({
+  nome,
   colunas,
   linhas,
   chave = 'id',
@@ -73,9 +82,13 @@ export function Grade<T extends Record<string, any>>({
   onDuploClique,
   carregando,
   vazio = 'Nenhum registro.',
-  compacta,
   rolarParaSelecionada,
+  acoes,
+  larguraAcoes,
+  onToast,
 }: {
+  /** Chave da configuração da grade em usuarios.config_listas (ex.: 'locacoes.contratos') */
+  nome: string;
   colunas: Coluna<T>[];
   linhas: T[];
   chave?: string;
@@ -84,81 +97,41 @@ export function Grade<T extends Record<string, any>>({
   onDuploClique?: (row: T) => void;
   carregando?: boolean;
   vazio?: string;
-  compacta?: boolean;
   rolarParaSelecionada?: boolean;
+  acoes?: (row: T) => React.ReactNode;
+  larguraAcoes?: string;
+  onToast?: (m: string) => void;
 }) {
-  const sel = useRef<HTMLTableRowElement>(null);
-  useEffect(() => {
-    if (rolarParaSelecionada) sel.current?.scrollIntoView({ block: 'nearest' });
-  }, [selecionada, rolarParaSelecionada, linhas]);
-  const temTotal = colunas.some((c) => c.total);
-  const py = compacta ? 'py-1' : 'py-1.5';
+  const cols: ColunaLista<T>[] = colunas.map((c, i) => ({
+    id: c.id ?? (typeof c.titulo === 'string' && c.titulo ? c.titulo : (c.campo ?? `c${i}`)),
+    titulo: c.titulo,
+    rotulo: c.rotulo,
+    render: c.render ?? (c.campo ? (row: T) => <span title={String(row[c.campo!] ?? '')}>{String(row[c.campo!] ?? '')}</span> : undefined),
+    alinhar: ALINHAR[c.alinhar ?? 'e'],
+    largura: c.largura,
+    estilo: c.estilo,
+    classe: c.negrito ? () => 'font-bold' : undefined,
+    rodape: c.total ? <span className="whitespace-nowrap">{linhas.length ? c.total(linhas) : ''}</span> : undefined,
+    oculta: c.oculta,
+    fixa: c.fixa,
+    grupo: c.grupo,
+  }));
   return (
-    <div className="flex-1 min-h-0 overflow-auto">
-      <table className="w-full text-xs border-separate border-spacing-0">
-        <thead className="sticky top-0 z-10">
-          <tr className="bg-stone-50 dark:bg-stone-950">
-            {colunas.map((c, i) => (
-              <th
-                key={i}
-                style={c.largura ? { minWidth: c.largura } : undefined}
-                className={`px-2 ${py} ${ALINHAR[c.alinhar ?? 'e']} font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-stone-200 dark:border-stone-800`}
-              >
-                {c.titulo}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {linhas.map((row) => {
-            const ativa = selecionada !== undefined && String(row[chave]) === String(selecionada);
-            return (
-              <tr
-                key={String(row[chave])}
-                ref={ativa ? sel : undefined}
-                onClick={() => onSelecionar?.(row)}
-                onDoubleClick={() => onDuploClique?.(row)}
-                className={`${onSelecionar ? 'cursor-pointer' : ''} ${ativa ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-stone-50 dark:hover:bg-stone-800/40'}`}
-              >
-                {colunas.map((c, i) => (
-                  <td
-                    key={i}
-                    style={c.estilo?.(row)}
-                    title={c.campo ? String(row[c.campo] ?? '') : undefined}
-                    className={`px-2 ${py} ${ALINHAR[c.alinhar ?? 'e']} ${c.negrito ? 'font-bold' : ''} text-stone-700 dark:text-stone-300 whitespace-nowrap max-w-[420px] truncate border-b border-stone-100 dark:border-stone-800/60`}
-                  >
-                    {c.render ? c.render(row) : String(row[c.campo!] ?? '')}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-        {temTotal && linhas.length > 0 && (
-          <tfoot className="sticky bottom-0">
-            <tr className="bg-stone-100 dark:bg-stone-900 font-semibold">
-              {colunas.map((c, i) => (
-                <td key={i} className={`px-2 ${py} ${ALINHAR[c.alinhar ?? 'e']} border-t border-stone-300 dark:border-stone-700 whitespace-nowrap`}>
-                  {c.total?.(linhas)}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
-        )}
-      </table>
-      {carregando ? (
-        <div className="flex items-center justify-center gap-2 py-8 text-stone-500 text-xs">
-          <Loader2 className="w-4 h-4 animate-spin" /> Carregando…
-        </div>
-      ) : (
-        !linhas.length && (
-          <div className="flex flex-col items-center gap-2 py-8 text-stone-400">
-            <Inbox className="w-5 h-5" />
-            <span className="text-xs">{vazio}</span>
-          </div>
-        )
-      )}
-    </div>
+      <GradeLista
+        nome={nome}
+        colunas={cols}
+        linhas={linhas}
+        chave={chave}
+        selecionado={selecionada}
+        onSelecionar={onSelecionar}
+        onDuploClique={onDuploClique}
+        carregando={carregando}
+        vazio={vazio}
+        acoes={acoes}
+        larguraAcoes={larguraAcoes}
+        onToast={onToast}
+        rolarParaSelecionado={rolarParaSelecionada}
+      />
   );
 }
 

@@ -272,3 +272,15 @@ export function contadoresALancar(
   if (cores.includes('S') && n(item.leitura_color) > 0) r.push({ color: 'S', anterior: n(item.leitura_color_anterior), atual: n(item.leitura_color) });
   return r;
 }
+
+/**
+ * Contadores de uma coleta do Scan Impressoras (printers_*.leitura). Impressora monocromática: o contador de vida
+ * (paginas), porque o split preto/cor de algumas marcas vem errado (Brother). Colorida: preto e cor separados; sem o
+ * split, o total vai como P&B.
+ */
+export function contadoresDaColeta(c: { paginas?: unknown; paginas_preto?: unknown; paginas_color?: unknown; colorida?: unknown }): { pb: number; cor: number } {
+  const n = (v: unknown) => (v === null || v === undefined || v === '' ? null : Math.max(0, Math.trunc(Number(v)) || 0));
+  if (!Number(c.colorida)) return { pb: n(c.paginas) ?? n(c.paginas_preto) ?? 0, cor: 0 };
+  const preto = n(c.paginas_preto);
+  return preto === null ? { pb: n(c.paginas) ?? 0, cor: 0 } : { pb: preto, cor: n(c.paginas_color) ?? 0 };
+}

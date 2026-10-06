@@ -113,6 +113,7 @@ export const BoletosAreceber: React.FC<Props> = ({ idAreceber = 0, idVenda = 0, 
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mb-3" />}
       <div className="h-[50vh] flex flex-col border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden">
         <Grade
+          nome="receber.boletos"
           linhas={linhas}
           selecionado={sel?.id}
           onSelecionar={setSel}
@@ -123,7 +124,7 @@ export const BoletosAreceber: React.FC<Props> = ({ idAreceber = 0, idVenda = 0, 
             { chave: 'id_venda', titulo: 'Venda', alinhar: 'dir' },
             { chave: 'documento', titulo: 'Documento' },
             { chave: 'parcelas_nr', titulo: 'Parcela', alinhar: 'centro', render: (r) => `${String(r.parcelas_nr ?? '').padStart(3, '0')}/${r.parcelas_tot ?? ''}` },
-            { chave: 'sacado_nome', titulo: 'Cliente' },
+            { chave: 'sacado_nome', titulo: 'Cliente', fixa: true },
             { chave: 'data_venda', titulo: 'Data Venda', alinhar: 'centro', render: (r) => data(r.data_venda) },
             { chave: 'data_vencimento', titulo: 'Vencimento', alinhar: 'centro', render: (r) => data(r.data_vencimento) },
             { chave: 'valor_areceber', titulo: 'Valor', alinhar: 'dir', render: (r) => moeda(r.valor_areceber), rodape: moeda(linhas.reduce((s, r) => s + Number(r.valor_areceber || 0), 0)) },

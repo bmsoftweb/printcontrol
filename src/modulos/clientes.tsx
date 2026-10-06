@@ -26,6 +26,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { AvisoErro } from '../components/AvisoErro';
 import { INPUT_CLASS } from '../utils/formStyles';
 import { formatDateBR } from '../utils/formatters';
+import { GradeLista, type ColunaLista } from '../components/GradeLista';
 import { FormCliente } from './clientes/FormCliente';
 import { ContratoCliente } from './clientes/ContratoCliente';
 import { MapaClientes } from './clientes/MapaClientes';
@@ -47,40 +48,64 @@ const Badge: React.FC<{ texto: string; cor: string; ligado: boolean }> = ({ text
 
 const moeda = (v: unknown, casas: number) =>
   `R$ ${Number(v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })}`;
-const th = 'px-2.5 py-2 text-center font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950';
-const td = 'px-2.5 py-1.5 border-b border-stone-100 dark:border-stone-800/60 whitespace-nowrap';
 
-/** Colunas de texto da grade (as primeiras, com ícones e etiquetas, ficam no corpo da tabela) */
-const COLUNAS_TEXTO: { campo: string; titulo: string; largura?: string; valor?: (c: Cliente) => string }[] = [
-  { campo: 'id', titulo: 'ID' },
-  { campo: 'banco', titulo: 'Banco' },
-  { campo: 'plano', titulo: 'Cobrança' },
-  { campo: 'nome', titulo: 'Nome', largura: 'max-w-[260px]' },
-  { campo: 'fantasia', titulo: 'Fantasia', largura: 'max-w-[200px]' },
-  { campo: 'endereco_cidade', titulo: 'Cidade' },
-  { campo: 'cpf_cnpj', titulo: 'CPF/CNPJ', valor: (c) => formataCnpj(c.cpf_cnpj) },
-  { campo: 'endereco', titulo: 'Endereço', largura: 'max-w-[220px]' },
-  { campo: 'endereco_nr', titulo: 'Nr.' },
-  { campo: 'endereco_complemento', titulo: 'Complemento', largura: 'max-w-[160px]' },
-  { campo: 'endereco_bairro', titulo: 'Bairro' },
-  { campo: 'endereco_uf', titulo: 'UF' },
-  { campo: 'endereco_cep', titulo: 'CEP' },
-  { campo: 'endereco_id_cidade', titulo: 'ID Cidade' },
-  { campo: 'regiao', titulo: 'Região' },
-  { campo: 'rg', titulo: 'RG/IE' },
-  { campo: 'fone_fixo', titulo: 'Fone (1)' },
-  { campo: 'fone_celular1', titulo: 'Fone (2)' },
-  { campo: 'fone_celular2', titulo: 'Fone (3)' },
-  { campo: 'email', titulo: 'e-Mail', largura: 'max-w-[220px]' },
-  { campo: 'tem_senha', titulo: 'Senha', valor: (c) => (c.tem_senha === 'S' ? '••••••' : '') },
-  { campo: 'id_integracao', titulo: 'Integração' },
-  { campo: 'representante_legal_nome', titulo: 'Nome Repres. Legal', largura: 'max-w-[200px]' },
-  { campo: 'representante_legal_cpf', titulo: 'CPF Repres. Legal' },
-  { campo: 'obs_nf', titulo: 'Observação para NF', largura: 'max-w-[260px]' },
-];
+/** Texto da célula com dica quando é longo (a grade corta com reticências) */
+const texto = (v: unknown) => {
+  const t = String(v ?? '');
+  return <span title={t.length > 25 ? t : undefined}>{t}</span>;
+};
+
+/** Colunas de texto da grade de clientes (as primeiras, com ícones e etiquetas, ficam na tela) */
+const COLUNAS_TEXTO: ColunaLista<Cliente>[] = (
+  [
+    { id: 'id', titulo: 'ID', alinhar: 'dir', classe: () => 'font-mono' },
+    { id: 'banco', titulo: 'Banco' },
+    { id: 'plano', titulo: 'Cobrança' },
+    { id: 'nome', titulo: 'Nome', largura: 260, fixa: true },
+    { id: 'fantasia', titulo: 'Fantasia', largura: 200 },
+    { id: 'endereco_cidade', titulo: 'Cidade' },
+    { id: 'cpf_cnpj', titulo: 'CPF/CNPJ', render: (c) => formataCnpj(c.cpf_cnpj) },
+    { id: 'endereco', titulo: 'Endereço', largura: 220 },
+    { id: 'endereco_nr', titulo: 'Nr.' },
+    { id: 'endereco_complemento', titulo: 'Complemento', largura: 160 },
+    { id: 'endereco_bairro', titulo: 'Bairro' },
+    { id: 'endereco_uf', titulo: 'UF', alinhar: 'centro' },
+    { id: 'endereco_cep', titulo: 'CEP' },
+    { id: 'endereco_id_cidade', titulo: 'ID Cidade', alinhar: 'dir', oculta: true },
+    { id: 'regiao', titulo: 'Região' },
+    { id: 'rg', titulo: 'RG/IE' },
+    { id: 'fone_fixo', titulo: 'Fone (1)' },
+    { id: 'fone_celular1', titulo: 'Fone (2)' },
+    { id: 'fone_celular2', titulo: 'Fone (3)' },
+    { id: 'email', titulo: 'e-Mail', largura: 220 },
+    { id: 'tem_senha', titulo: 'Senha', render: (c) => (c.tem_senha === 'S' ? '••••••' : ''), oculta: true },
+    { id: 'id_integracao', titulo: 'Integração', oculta: true },
+    { id: 'representante_legal_nome', titulo: 'Nome Repres. Legal', largura: 200, oculta: true },
+    { id: 'representante_legal_cpf', titulo: 'CPF Repres. Legal', oculta: true },
+    { id: 'obs_nf', titulo: 'Observação para NF', largura: 260, oculta: true },
+  ] as ColunaLista<Cliente>[]
+).map((c) => ({ render: (r: Cliente) => texto(r[c.id]), ...c }));
+
+const data = (v: unknown) => (v ? formatDateBR(v as string) : '');
 
 /** Grade "Lista de Equipamentos": contratos de locação do cliente selecionado (somente leitura) */
-const ContratosDoCliente: React.FC<{ cliente: Cliente; versao: number }> = ({ cliente, versao }) => {
+const COLUNAS_CONTRATOS: ColunaLista<Cliente>[] = (
+  [
+    { id: 'ativo', titulo: 'Ativo', alinhar: 'centro', render: (c) => <Badge texto={c.ativo === 'S' ? 'SIM' : 'NÃO'} cor="#2E8B57" ligado={c.ativo === 'S'} /> },
+    { id: 'marca_descricao', titulo: 'Marca', campo: 'marca_descricao' },
+    { id: 'modelo', titulo: 'Modelo', campo: 'modelo' },
+    { id: 'setor', titulo: 'Setor', campo: 'setor' },
+    { id: 'nr_serie', titulo: 'Série', campo: 'nr_serie' },
+    { id: 'valor_contrato', titulo: 'Valor Contrato R$', alinhar: 'dir', render: (c) => moeda(c.valor_contrato, 2) },
+    { id: 'valor_copia', titulo: 'Valor Cópia R$', alinhar: 'dir', render: (c) => moeda(c.valor_copia, 5) },
+    { id: 'valor_excedente', titulo: 'Valor Excedente R$', alinhar: 'dir', render: (c) => moeda(c.valor_excedente, 5) },
+    { id: 'data_contrato', titulo: 'Data Contrato', alinhar: 'centro', render: (c) => data(c.data_contrato) },
+    { id: 'data_vencimento', titulo: 'Validade', alinhar: 'centro', render: (c) => data(c.data_vencimento) },
+    { id: 'obs', titulo: 'Observações', largura: 300, render: (c) => <span title={c.obs ?? ''}>{c.obs}</span> },
+  ] as ColunaLista<Cliente>[]
+).map((c) => ({ ...c, classe: (r: Cliente) => `${c.alinhar === 'dir' ? 'font-mono' : ''} ${r.ativo === 'S' ? '' : '!text-stone-400'}` }));
+
+const ContratosDoCliente: React.FC<{ cliente: Cliente; versao: number; onToast: (m: string) => void }> = ({ cliente, versao, onToast }) => {
   const [lista, setLista] = useState<Cliente[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   useEffect(() => {
@@ -95,60 +120,24 @@ const ContratosDoCliente: React.FC<{ cliente: Cliente; versao: number }> = ({ cl
         {lista && <span className="font-normal"> · {lista.length} contrato(s)</span>}
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="m-2" />}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-xs border-separate border-spacing-0">
-          <thead className="sticky top-0">
-            <tr>
-              {['Ativo', 'Marca', 'Modelo', 'Setor', 'Série', 'Valor Contrato R$', 'Valor Cópia R$', 'Valor Excedente R$', 'Data Contrato', 'Validade', 'Observações'].map((t) => (
-                <th key={t} className={th}>
-                  {t}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!lista ? (
-              <tr>
-                <td colSpan={11} className="py-6 text-center">
-                  <Loader2 className="w-4 h-4 animate-spin inline text-stone-400" />
-                </td>
-              </tr>
-            ) : !lista.length ? (
-              <tr>
-                <td colSpan={11} className="py-6 text-center text-stone-400">
-                  Nenhum contrato de locação.
-                </td>
-              </tr>
-            ) : (
-              lista.map((c) => (
-                <tr key={c.id} className={c.ativo === 'S' ? '' : 'text-stone-400'}>
-                  <td className={`${td} text-center`}>
-                    <Badge texto={c.ativo === 'S' ? 'SIM' : 'NÃO'} cor="#2E8B57" ligado={c.ativo === 'S'} />
-                  </td>
-                  <td className={td}>{c.marca_descricao}</td>
-                  <td className={td}>{c.modelo}</td>
-                  <td className={td}>{c.setor}</td>
-                  <td className={td}>{c.nr_serie}</td>
-                  <td className={`${td} text-right font-mono`}>{moeda(c.valor_contrato, 2)}</td>
-                  <td className={`${td} text-right font-mono`}>{moeda(c.valor_copia, 5)}</td>
-                  <td className={`${td} text-right font-mono`}>{moeda(c.valor_excedente, 5)}</td>
-                  <td className={`${td} text-center`}>{c.data_contrato ? formatDateBR(c.data_contrato) : ''}</td>
-                  <td className={`${td} text-center`}>{c.data_vencimento ? formatDateBR(c.data_vencimento) : ''}</td>
-                  <td className={`${td} max-w-[300px] truncate`} title={c.obs ?? ''}>
-                    {c.obs}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <GradeLista nome="clientes.contratos" colunas={COLUNAS_CONTRATOS} linhas={lista ?? []} carregando={!lista && !erro} vazio="Nenhum contrato de locação." onToast={onToast} />
     </div>
   );
 };
 
 /** Aba Inventário: produtos em posse do cliente */
-const Inventario: React.FC<{ cliente: Cliente; onVoltar: () => void }> = ({ cliente, onVoltar }) => {
+const COLUNAS_INVENTARIO: ColunaLista<Cliente>[] = [
+  { id: 'apelido_grupo', titulo: 'Grupo', campo: 'apelido_grupo' },
+  { id: 'apelido_empresa', titulo: 'Empresa', campo: 'apelido_empresa' },
+  { id: 'id_produto', titulo: 'ID Prod', campo: 'id_produto', alinhar: 'dir', classe: () => 'font-mono' },
+  { id: 'descricao', titulo: 'Produto', campo: 'descricao' },
+  { id: 'marca_descricao', titulo: 'Marca', campo: 'marca_descricao' },
+  { id: 'modelo_descricao', titulo: 'Modelo', campo: 'modelo_descricao' },
+  { id: 'setor', titulo: 'Setor', campo: 'setor' },
+  { id: 'qtdade', titulo: 'Qtdade', alinhar: 'dir', classe: () => 'font-mono', render: (p) => Number(p.qtdade ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 4 }) },
+];
+
+const Inventario: React.FC<{ cliente: Cliente; onVoltar: () => void; onToast: (m: string) => void }> = ({ cliente, onVoltar, onToast }) => {
   const [lista, setLista] = useState<Cliente[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const carregar = useCallback(() => {
@@ -174,49 +163,7 @@ const Inventario: React.FC<{ cliente: Cliente; onVoltar: () => void }> = ({ clie
         </div>
       </div>
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-xs border-separate border-spacing-0">
-          <thead className="sticky top-0">
-            <tr>
-              {['Grupo', 'Empresa', 'ID Prod', 'Produto', 'Marca', 'Modelo', 'Setor', 'Qtdade'].map((t) => (
-                <th key={t} className={th}>
-                  {t}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {!lista ? (
-              !erro && (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center">
-                    <Loader2 className="w-4 h-4 animate-spin inline text-stone-400" />
-                  </td>
-                </tr>
-              )
-            ) : !lista.length ? (
-              <tr>
-                <td colSpan={8} className="py-10 text-center text-stone-400">
-                  Nenhum produto em posse do cliente.
-                </td>
-              </tr>
-            ) : (
-              lista.map((p, i) => (
-                <tr key={i}>
-                  <td className={td}>{p.apelido_grupo}</td>
-                  <td className={td}>{p.apelido_empresa}</td>
-                  <td className={`${td} text-right font-mono`}>{p.id_produto}</td>
-                  <td className={td}>{p.descricao}</td>
-                  <td className={td}>{p.marca_descricao}</td>
-                  <td className={td}>{p.modelo_descricao}</td>
-                  <td className={td}>{p.setor}</td>
-                  <td className={`${td} text-right font-mono`}>{Number(p.qtdade ?? 0).toLocaleString('pt-BR', { maximumFractionDigits: 4 })}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <GradeLista nome="clientes.inventario" colunas={COLUNAS_INVENTARIO} linhas={lista ?? []} carregando={!lista && !erro} vazio="Nenhum produto em posse do cliente." onToast={onToast} />
     </div>
   );
 };
@@ -325,7 +272,6 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
 
   /** Clique nas colunas ".", CLI e FOR: inverte e grava na hora */
   const alternar = async (c: Cliente, campo: 'fj' | 'cliente_flag' | 'fornec_flag') => {
-    setSelId(c.id);
     setAlternando(`${c.id}:${campo}`);
     try {
       const r = await api.post<{ valor: string }>(`/api/clientes/${c.id}/alternar`, { campo });
@@ -349,7 +295,7 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
     setVersaoDetalhe((v) => v + 1);
   };
 
-  if (aba === 'inventario' && sel) return <Inventario cliente={sel} onVoltar={() => setAba('lista')} />;
+  if (aba === 'inventario' && sel) return <Inventario cliente={sel} onVoltar={() => setAba('lista')} onToast={onToast} />;
   if (aba === 'contrato' && sel) return <ContratoCliente cliente={sel} onVoltar={voltar} onToast={onToast} />;
   if (aba === 'mapa')
     return (
@@ -368,16 +314,119 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const temFiltro = Object.values(filtro).some(Boolean);
   const carregandoToggle = (c: Cliente, campo: string) => alternando === `${c.id}:${campo}`;
+  /** Clique que grava na hora: não seleciona nem abre a linha */
+  const clique = (fn: () => void) => ({
+    onClick: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      fn();
+    },
+    onDoubleClick: (e: React.MouseEvent) => e.stopPropagation(),
+  });
+  const ALVO = 'flex items-center justify-center w-full cursor-pointer';
+
+  const colunas: ColunaLista<Cliente>[] = [
+    {
+      id: 'fj',
+      titulo: '.',
+      rotulo: 'Física/Jurídica',
+      dica: 'Pessoa física / jurídica (clique para alternar)',
+      alinhar: 'centro',
+      render: (c) => (
+        <span {...clique(() => alternar(c, 'fj'))} className={ALVO} title={c.fj === 'F' ? 'Pessoa física (clique: jurídica)' : 'Pessoa jurídica (clique: física)'}>
+          {carregandoToggle(c, 'fj') ? (
+            <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
+          ) : c.fj === 'F' ? (
+            <User className="w-4 h-4 text-sky-600" />
+          ) : (
+            <Building2 className="w-4 h-4 text-amber-600" />
+          )}
+        </span>
+      ),
+    },
+    {
+      id: 'cliente_flag',
+      titulo: 'CLI',
+      dica: 'Cliente (clique para alternar)',
+      alinhar: 'centro',
+      render: (c) => (
+        <span {...clique(() => alternar(c, 'cliente_flag'))} className={ALVO}>
+          <Badge texto="CLI" cor="#708090" ligado={c.cliente_flag === 'S'} />
+        </span>
+      ),
+    },
+    {
+      id: 'fornec_flag',
+      titulo: 'FOR',
+      dica: 'Fornecedor (clique para alternar)',
+      alinhar: 'centro',
+      render: (c) => (
+        <span {...clique(() => alternar(c, 'fornec_flag'))} className={ALVO}>
+          <Badge texto="FOR" cor="#708090" ligado={c.fornec_flag === 'S'} />
+        </span>
+      ),
+    },
+    {
+      id: 'tem_contrato',
+      titulo: 'Contrato',
+      alinhar: 'centro',
+      render: (c) => <Badge texto={c.tem_contrato === 'S' ? 'SIM' : 'NÃO'} cor="#2E8B57" ligado={c.tem_contrato === 'S'} />,
+    },
+    {
+      id: 'coordenadas',
+      titulo: '',
+      rotulo: 'Coordenadas',
+      dica: 'Coordenadas (duplo clique: acertar no mapa)',
+      alinhar: 'centro',
+      render: (c) => (
+        <span
+          className={ALVO}
+          title="Duplo clique: acertar as coordenadas no mapa"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            abrirMapaUnico(c);
+          }}
+        >
+          {c.tem_coordenadas === 'S' ? <MapPin className="w-4 h-4 text-emerald-600" /> : <span className="inline-block w-4 h-4" />}
+        </span>
+      ),
+    },
+    {
+      id: 'obs',
+      titulo: 'Obs.',
+      alinhar: 'centro',
+      render: (c) => (
+        <button
+          type="button"
+          title={c.obs ? String(c.obs).slice(0, 300) : 'Observações'}
+          {...clique(() => {
+            setSelId(c.id);
+            setObs(c);
+          })}
+          className={`px-1.5 rounded border text-[11px] font-bold leading-4 cursor-pointer ${
+            c.obs ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800' : 'border-stone-300 text-stone-500 dark:border-stone-700'
+          }`}
+        >
+          …
+        </button>
+      ),
+    },
+    ...COLUNAS_TEXTO,
+  ];
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-stone-900">
-      {/* Barra: filtros (linha de filtro da grade do Delphi) e botões */}
+      {/* Barra: Novo, filtros (linha de filtro da grade do Delphi) e ações */}
       <div className="px-4 py-2.5 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center gap-2">
+        <button type="button" className={BOTAO_PRIMARIO} onClick={() => setEditando({ registro: null })}>
+          <Plus className="w-4 h-4" />
+          Novo
+        </button>
         <input
           className={`${INPUT_CLASS} w-20 font-mono`}
           placeholder="ID"
           inputMode="numeric"
           value={filtro.id}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => setFiltro({ ...filtro, id: e.target.value.replace(/\D/g, '').slice(0, 9) })}
           aria-label="Filtrar por ID"
         />
@@ -385,6 +434,7 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
           className={`${INPUT_CLASS} w-56 uppercase`}
           placeholder="Nome (começa com)"
           value={filtro.nome}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => setFiltro({ ...filtro, nome: e.target.value.toUpperCase() })}
           aria-label="Filtrar por nome"
         />
@@ -393,6 +443,7 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
           placeholder="CPF/CNPJ"
           inputMode="numeric"
           value={filtro.cpf}
+          onFocus={(e) => e.target.select()}
           onChange={(e) => setFiltro({ ...filtro, cpf: e.target.value.replace(/[^\d./-]/g, '').slice(0, 18) })}
           aria-label="Filtrar por CPF/CNPJ"
         />
@@ -405,7 +456,7 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
           ))}
         </select>
         {temFiltro && (
-          <button type="button" title="Limpar os filtros" onClick={() => setFiltro(FILTRO_VAZIO)} className="p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer">
+          <button type="button" title="Limpar os filtros" onClick={() => setFiltro(FILTRO_VAZIO)} className="h-[38px] px-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         )}
@@ -430,150 +481,54 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
             <IconeMapa className="w-4 h-4" />
             Mapa
           </button>
-          <button type="button" className={BOTAO_PRIMARIO} onClick={() => setEditando({ registro: null })}>
-            <Plus className="w-4 h-4" />
-            Novo
-          </button>
         </div>
       </div>
 
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3" />}
 
-      <div className="flex-1 overflow-auto min-h-0">
-        <table className="w-full text-xs border-separate border-spacing-0">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th className={`${th} sticky left-0 z-20 w-[30px] px-0`} />
-              <th className={th} title="Pessoa física / jurídica (clique para alternar)">.</th>
-              <th className={th} title="Cliente (clique para alternar)">CLI</th>
-              <th className={th} title="Fornecedor (clique para alternar)">FOR</th>
-              <th className={th}>Contrato</th>
-              <th className={th} title="Coordenadas (duplo clique: acertar no mapa)" />
-              <th className={th}>Obs.</th>
-              {COLUNAS_TEXTO.map((c) => (
-                <th key={c.campo} className={th}>
-                  {c.titulo}
-                </th>
-              ))}
-              <th className={`${th} w-full`} />
-              <th className={`${th} sticky right-0 z-20 border-l`}>Ações</th>
-            </tr>
-          </thead>
-          <tbody className={carregando && rows.length ? 'opacity-60' : undefined}>
-            {carregando && !rows.length && (
-              <tr>
-                <td colSpan={COLUNAS_TEXTO.length + 9} className="py-12 text-center text-stone-500">
-                  <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                  Carregando registros…
-                </td>
-              </tr>
-            )}
-            {!carregando && !rows.length && (
-              <tr>
-                <td colSpan={COLUNAS_TEXTO.length + 9} className="py-14 text-center text-stone-400">
-                  <Inbox className="w-8 h-8 mx-auto mb-2" />
-                  {temFiltro ? 'Nenhum cliente corresponde aos filtros.' : 'Nenhum cliente cadastrado.'}
-                </td>
-              </tr>
-            )}
-            {rows.map((c) => {
-              const s = c.id === selId;
-              return (
-                <tr
-                  key={c.id}
-                  onClick={() => setSelId(c.id)}
-                  onDoubleClick={() => setEditando({ registro: c })}
-                  className={`group cursor-pointer ${s ? 'bg-blue-100 dark:bg-blue-950' : 'bg-white dark:bg-stone-900 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-                >
-                  <td className={`${td} sticky left-0 z-[5] bg-inherit px-0 text-center border-r border-stone-200 dark:border-stone-800`}>
-                    <ChevronRight className={`w-3.5 h-3.5 mx-auto ${s ? 'text-blue-600' : 'text-stone-300 opacity-0 group-hover:opacity-100'}`} />
-                  </td>
-                  <td className={`${td} text-center`} onClick={() => alternar(c, 'fj')} onDoubleClick={(e) => e.stopPropagation()} title={c.fj === 'F' ? 'Pessoa física (clique: jurídica)' : 'Pessoa jurídica (clique: física)'}>
-                    {carregandoToggle(c, 'fj') ? (
-                      <Loader2 className="w-4 h-4 animate-spin inline text-stone-400" />
-                    ) : c.fj === 'F' ? (
-                      <User className="w-4 h-4 inline text-sky-600" />
-                    ) : (
-                      <Building2 className="w-4 h-4 inline text-amber-600" />
-                    )}
-                  </td>
-                  <td className={`${td} text-center`} onClick={() => alternar(c, 'cliente_flag')} onDoubleClick={(e) => e.stopPropagation()}>
-                    <Badge texto="CLI" cor="#708090" ligado={c.cliente_flag === 'S'} />
-                  </td>
-                  <td className={`${td} text-center`} onClick={() => alternar(c, 'fornec_flag')} onDoubleClick={(e) => e.stopPropagation()}>
-                    <Badge texto="FOR" cor="#708090" ligado={c.fornec_flag === 'S'} />
-                  </td>
-                  <td className={`${td} text-center`}>
-                    <Badge texto={c.tem_contrato === 'S' ? 'SIM' : 'NÃO'} cor="#2E8B57" ligado={c.tem_contrato === 'S'} />
-                  </td>
-                  <td
-                    className={`${td} text-center`}
-                    title="Duplo clique: acertar as coordenadas no mapa"
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      abrirMapaUnico(c);
-                    }}
-                  >
-                    {c.tem_coordenadas === 'S' ? <MapPin className="w-4 h-4 inline text-emerald-600" /> : <span className="inline-block w-4" />}
-                  </td>
-                  <td className={`${td} text-center`} onDoubleClick={(e) => e.stopPropagation()}>
-                    <button
-                      type="button"
-                      title={c.obs ? String(c.obs).slice(0, 300) : 'Observações'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelId(c.id);
-                        setObs(c);
-                      }}
-                      className={`px-1.5 rounded border text-[11px] font-bold leading-4 cursor-pointer ${
-                        c.obs ? 'border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800' : 'border-stone-300 text-stone-500 dark:border-stone-700'
-                      }`}
-                    >
-                      …
-                    </button>
-                  </td>
-                  {COLUNAS_TEXTO.map((col) => {
-                    const v = col.valor ? col.valor(c) : String(c[col.campo] ?? '');
-                    return (
-                      <td key={col.campo} className={`${td} ${col.campo === 'id' ? 'text-right font-mono' : ''} ${col.largura ?? ''} truncate`} title={v.length > 25 ? v : undefined}>
-                        {v}
-                      </td>
-                    );
-                  })}
-                  <td className={td} />
-                  <td className={`${td} sticky right-0 z-[5] bg-inherit text-center border-l border-stone-200 dark:border-stone-800`} onDoubleClick={(e) => e.stopPropagation()}>
-                    <MenuAcoes>
-                      <BotaoAcao icone={MessageSquareText} titulo="Observações" descricao="Observações do cliente" onClick={() => setObs(c)} />
-                      <BotaoAcao
-                        icone={FileText}
-                        titulo="Contrato"
-                        descricao="Contrato HTML do cliente"
-                        onClick={() => {
-                          setSelId(c.id);
-                          setAba('contrato');
-                        }}
-                      />
-                      <BotaoAcao
-                        icone={Package}
-                        titulo="Inventário"
-                        descricao="Produtos em posse do cliente"
-                        onClick={() => {
-                          setSelId(c.id);
-                          setAba('inventario');
-                        }}
-                      />
-                      <BotaoAcao icone={MapPin} titulo="Acertar coordenadas" descricao="Posição do cliente no mapa" onClick={() => abrirMapaUnico(c)} />
-                      <SeparadorAcoes />
-                      <BotaoAcao icone={Pencil} titulo="Editar" descricao="Abre o cadastro do cliente" onClick={() => setEditando({ registro: c })} />
-                      <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui o cliente (pede confirmação)" tom="perigo" onClick={() => setExcluindo(c)} />
-                    </MenuAcoes>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <GradeLista
+        nome="clientes.lista"
+        colunas={colunas}
+        linhas={rows}
+        selecionado={selId}
+        onSelecionar={(c) => setSelId(c.id)}
+        onDuploClique={(c) => setEditando({ registro: c })}
+        carregando={carregando}
+        onToast={onToast}
+        vazio={
+          <span className="text-stone-400">
+            <Inbox className="w-8 h-8 mx-auto mb-2" />
+            {temFiltro ? 'Nenhum cliente corresponde aos filtros.' : 'Nenhum cliente cadastrado.'}
+          </span>
+        }
+        acoes={(c) => (
+          <MenuAcoes>
+            <BotaoAcao icone={MessageSquareText} titulo="Observações" descricao="Observações do cliente" onClick={() => setObs(c)} />
+            <BotaoAcao
+              icone={FileText}
+              titulo="Contrato"
+              descricao="Contrato HTML do cliente"
+              onClick={() => {
+                setSelId(c.id);
+                setAba('contrato');
+              }}
+            />
+            <BotaoAcao
+              icone={Package}
+              titulo="Inventário"
+              descricao="Produtos em posse do cliente"
+              onClick={() => {
+                setSelId(c.id);
+                setAba('inventario');
+              }}
+            />
+            <BotaoAcao icone={MapPin} titulo="Acertar coordenadas" descricao="Posição do cliente no mapa" onClick={() => abrirMapaUnico(c)} />
+            <SeparadorAcoes />
+            <BotaoAcao icone={Pencil} titulo="Editar" descricao="Abre o cadastro do cliente" onClick={() => setEditando({ registro: c })} />
+            <BotaoAcao icone={Trash2} titulo="Excluir" descricao="Exclui o cliente (pede confirmação)" tom="perigo" onClick={() => setExcluindo(c)} />
+          </MenuAcoes>
+        )}
+      />
 
       <div className="px-4 py-2 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/40 flex items-center justify-between gap-3 shrink-0 text-[11px] text-stone-500 dark:text-stone-400">
         <span>
@@ -594,7 +549,7 @@ const TelaClientes: React.FC<TelaProps> = ({ onToast, refreshToken, onCountChang
         )}
       </div>
 
-      {sel && <ContratosDoCliente cliente={sel} versao={versaoDetalhe} />}
+      {sel && <ContratosDoCliente cliente={sel} versao={versaoDetalhe} onToast={onToast} />}
 
       {editando && (
         <FormCliente

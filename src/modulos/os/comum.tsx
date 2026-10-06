@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inbox, Loader2 } from 'lucide-react';
+import { GradeLista, type ColunaLista } from '../../components/GradeLista';
 import { lerSessao } from '../../utils/session';
 import { formatarNumero } from './regras';
 import { INPUT_CLASS } from '../../utils/formStyles';
@@ -28,33 +28,18 @@ export const dataHoraBR = (v: unknown) => {
 };
 export const valorBR = (v: unknown, formato = ',0.00') => formatarNumero(v, formato);
 
-export interface ColunaGrade<T> {
-  chave: string;
-  titulo: React.ReactNode;
-  largura?: number;
-  alinhar?: 'esq' | 'centro' | 'dir';
-  render?: (row: T) => React.ReactNode;
-  /** Dica (title) do cabeçalho */
-  dica?: string;
-  /** Coluna presa à direita (Ações) */
-  fixa?: boolean;
-}
+/** Coluna das grades de OS/Requisições/Consultas: a da GradeLista com `chave` (campo e id da configuração) */
+export type ColunaGrade<T> = Omit<ColunaLista<T>, 'id' | 'campo'> & { chave: string };
 
 /**
- * Grade somente leitura das telas de OS/Requisições/Consultas (a edição é por formulário em janela):
- * cabeçalho fixo, rolagem nas duas direções, linha selecionada e duplo clique.
+ * Grade das telas de OS/Requisições/Consultas (a edição é por formulário em janela): adaptador da GradeLista
+ * (menu ☰, colunas configuráveis e salvas em usuarios.config_listas com a chave `nome`).
  */
 export function Grade<T extends Record<string, any>>({
   colunas,
-  linhas,
-  chave = 'id',
-  selecionado,
-  onSelecionar,
-  onDuploClique,
-  carregando,
-  vazio = 'Nenhum registro.',
-  rodape,
+  ...props
 }: {
+  nome: string;
   colunas: ColunaGrade<T>[];
   linhas: T[];
   chave?: string;
@@ -62,68 +47,13 @@ export function Grade<T extends Record<string, any>>({
   onSelecionar?: (row: T) => void;
   onDuploClique?: (row: T) => void;
   carregando?: boolean;
-  vazio?: string;
-  rodape?: React.ReactNode;
+  vazio?: React.ReactNode;
+  acoes?: (row: T) => React.ReactNode;
+  larguraAcoes?: string;
+  classeLinha?: (row: T) => string;
+  onToast?: (msg: string) => void;
 }) {
-  const alinhar = (a?: string) => (a === 'centro' ? 'text-center' : a === 'dir' ? 'text-right' : 'text-left');
-  return (
-    <div className="flex-1 min-h-0 overflow-auto">
-      <table className="text-xs border-separate border-spacing-0 min-w-full">
-        <thead className="sticky top-0 z-10">
-          <tr>
-            {colunas.map((c) => (
-              <th
-                key={c.chave}
-                title={c.dica}
-                style={c.largura ? { minWidth: c.largura, width: c.largura } : undefined}
-                className={`${c.fixa ? 'sticky right-0 border-l ' : ''}px-2.5 py-2 text-center font-semibold text-stone-600 dark:text-stone-300 whitespace-nowrap border-b border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950`}
-              >
-                {c.titulo}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className={carregando && linhas.length ? 'opacity-60' : undefined}>
-          {!linhas.length && (
-            <tr>
-              <td colSpan={colunas.length} className="px-3 py-10 text-center text-stone-500 dark:text-stone-400">
-                <span className="inline-flex items-center gap-2">
-                  {carregando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Inbox className="w-4 h-4" />}
-                  {carregando ? 'Carregando…' : vazio}
-                </span>
-              </td>
-            </tr>
-          )}
-          {linhas.map((row) => {
-            const ativo = selecionado !== undefined && String(row[chave]) === String(selecionado);
-            return (
-              <tr
-                key={String(row[chave])}
-                onClick={() => onSelecionar?.(row)}
-                onDoubleClick={() => onDuploClique?.(row)}
-                className={`cursor-default ${ativo ? 'bg-blue-50 dark:bg-blue-950/40' : 'hover:bg-stone-50 dark:hover:bg-stone-800/40'}`}
-              >
-                {colunas.map((c) => {
-                  const v = c.render ? c.render(row) : row[c.chave];
-                  return (
-                    <td
-                      key={c.chave}
-                      title={typeof v === 'string' && v.length > 30 ? v : undefined}
-                      style={c.largura ? { maxWidth: Math.max(c.largura, 60) } : undefined}
-                      className={`${c.fixa ? 'sticky right-0 border-l bg-white dark:bg-stone-900 ' : ''}px-2.5 py-1.5 border-b border-stone-100 dark:border-stone-800/70 truncate text-stone-800 dark:text-stone-200 ${alinhar(c.alinhar)}`}
-                    >
-                      {v as React.ReactNode}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-        {rodape && <tfoot className="sticky bottom-0 bg-stone-50 dark:bg-stone-950">{rodape}</tfoot>}
-      </table>
-    </div>
-  );
+  return <GradeLista {...props} colunas={colunas.map((c) => ({ ...c, id: c.chave, campo: c.chave }))} />;
 }
 
 /** Barra de ferramentas das telas próprias */

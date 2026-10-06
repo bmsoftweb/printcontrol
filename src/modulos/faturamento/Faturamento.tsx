@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Ban, Barcode, ChevronDown, Eraser, FileDown, FileText, ListChecks, Loader2, Mail, Pencil, Printer, RefreshCw, Save, Sparkles } from 'lucide-react';
+import { Ban, Barcode, Eraser, FileDown, FileText, ListChecks, Loader2, Mail, Pencil, Printer, RefreshCw, Save, Sparkles } from 'lucide-react';
 import type { TelaProps } from '../tipos';
 import { api } from '../../services/api';
 import { AvisoErro } from '../../components/AvisoErro';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Janela, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from '../../components/Janela';
 import { BotaoAcao, MenuAcoes, SeparadorAcoes } from '../../components/MenuAcoes';
+import { MaisAcoes } from '../../components/MaisAcoes';
 import { DateField } from '../../components/DateField';
 import { NumberField } from '../../components/NumberField';
 import { INPUT_CLASS, LABEL_CLASS, FIELD_CLASS, HINT_CLASS } from '../../utils/formStyles';
@@ -102,6 +103,10 @@ const EditarNota: React.FC<{ nota: Reg; opcoes: Opcoes | null; onFechar: () => v
   );
 };
 
+const CHAVE_ALTURA = 'printcontrol.faturamento.alturaProdutos';
+const MIN_PRODUTOS = 110;
+const MIN_NOTAS = 160;
+
 /** Tela Faturamento (ufrmFatur): faturamentos × notas × produtos, pré-faturamento, NF, boleto, e-mail e remessa */
 export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) => {
   const [faturs, setFaturs] = useState<Reg[]>([]);
@@ -118,7 +123,14 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
   const [editar, setEditar] = useState<Reg | null>(null);
   const [confirmar, setConfirmar] = useState<{ tipo: 'cancelar' | 'limpar' | 'remessa'; nota: Reg } | null>(null);
   const [editRef, setEditRef] = useState<{ id: number; obs: string } | null>(null);
-  const [opcoesAberto, setOpcoesAberto] = useState(false);
+  const [altProdutos, setAltProdutos] = useState(() => {
+    try {
+      return Number(localStorage.getItem(CHAVE_ALTURA)) || 224;
+    } catch {
+      return 224;
+    }
+  });
+  const divisaoRef = useRef<HTMLDivElement>(null);
   const notaIdRef = useRef<number | null>(null);
   notaIdRef.current = nota?.id ?? null;
   const faturIdRef = useRef<number | null>(null);
@@ -208,6 +220,35 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
       onToast(`Remessa com ${h.get('X-Titulos')} título(s) gerada.${sem ? ` ${sem} nota(s) sem boleto ficaram de fora.` : ''}`);
     });
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAVE_ALTURA, String(altProdutos));
+    } catch {
+      /* sem armazenamento: só não lembra a altura */
+    }
+  }, [altProdutos]);
+
+  /** Altura do painel de produtos, limitada para os dois painéis continuarem usáveis */
+  const ajustarProdutos = (alt: number) => {
+    const total = divisaoRef.current?.clientHeight ?? 600;
+    setAltProdutos(Math.round(Math.max(MIN_PRODUTOS, Math.min(total - MIN_NOTAS, alt))));
+  };
+
+  /** Alça entre notas e produtos: arrastar muda a altura dos produtos */
+  const arrastarDivisao = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const fundo = divisaoRef.current!.getBoundingClientRect().bottom;
+    const mover = (ev: PointerEvent) => ajustarProdutos(fundo - ev.clientY);
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'row-resize';
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  };
+
   const gravarRef = async () => {
     if (!editRef) return;
     const r = editRef;
@@ -221,10 +262,10 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
   };
 
   const colunasNotas: Coluna[] = [
-    { chave: 'cancelado', titulo: '', classe: (r) => (r.cancelado === 'S' ? 'bg-rose-600' : ''), render: () => null, largura: 'w-2' },
-    { chave: 'status', titulo: 'Status', alinhar: 'centro', render: (r) => <SeloStatusNota status={r.status} /> },
+    { chave: 'cancelado', titulo: '', rotulo: 'Cancelada', classe: (r) => (r.cancelado === 'S' ? 'bg-rose-600' : ''), render: () => null, largura: 8 },
+    { chave: 'status', titulo: 'Status', alinhar: 'centro', render: (r) => <SeloStatusNota status={r.status} vencimento={r.data_vencimento} /> },
     { chave: 'id_cliente', titulo: 'ID/Cliente', alinhar: 'dir' },
-    { chave: 'nome', titulo: 'Nome' },
+    { chave: 'nome', titulo: 'Nome', fixa: true },
     { chave: 'email', titulo: 'E-Mail' },
     { chave: 'serie', titulo: 'Série', alinhar: 'centro' },
     { chave: 'numero', titulo: 'Nr. NF', alinhar: 'dir' },
@@ -247,13 +288,13 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
     { chave: 'descricao', titulo: 'Equipamento' },
     { chave: 'nr_serie', titulo: 'Série' },
     { chave: 'setor', titulo: 'Setor' },
-    { chave: 'leitura_anterior', titulo: 'Leitura Anterior', alinhar: 'dir', render: (r) => inteiro(r.leitura_anterior) },
+    { chave: 'leitura_anterior', titulo: 'Leitura Anterior', oculta: true, alinhar: 'dir', render: (r) => inteiro(r.leitura_anterior) },
     { chave: 'leitura_atual', titulo: 'Leitura Atual', alinhar: 'dir', render: (r) => inteiro(r.leitura_atual) },
     { chave: 'nr_copias', titulo: 'Nr. Cópias', alinhar: 'dir', render: (r) => inteiro(r.nr_copias) },
-    { chave: 'nr_copias_contrato', titulo: 'Nr. Cópias Contrato', alinhar: 'dir', render: (r) => inteiro(r.nr_copias_contrato) },
+    { chave: 'nr_copias_contrato', titulo: 'Nr. Cópias Contrato', oculta: true, alinhar: 'dir', render: (r) => inteiro(r.nr_copias_contrato) },
     { chave: 'nr_copias_exced', titulo: 'Nr. Cópias Exced.', alinhar: 'dir', render: (r) => inteiro(r.nr_copias_exced) },
-    { chave: 'valor_unit_copia', titulo: 'Vlr. Unit Cópia', alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_unit_copia)}` },
-    { chave: 'valor_unit_exced', titulo: 'Vlr. Unit Exced.', alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_unit_exced)}` },
+    { chave: 'valor_unit_copia', titulo: 'Vlr. Unit Cópia', oculta: true, alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_unit_copia)}` },
+    { chave: 'valor_unit_exced', titulo: 'Vlr. Unit Exced.', oculta: true, alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_unit_exced)}` },
     { chave: 'valor_total_contrato', titulo: 'Vlr. Total Contrato', alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_total_contrato)}` },
     { chave: 'valor_total_exced', titulo: 'Vlr. Total Exced.', alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_total_exced)}` },
     { chave: 'valor_liquido', titulo: 'Valor NF', alinhar: 'dir', render: (r) => `R$ ${moeda(r.valor_liquido)}`, rodape: `R$ ${moeda(produtos.reduce((s, p) => s + Number(p.valor_liquido || 0), 0))}` },
@@ -293,31 +334,16 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
       <div className="px-4 py-2.5 flex flex-wrap items-center gap-2 border-b border-stone-200 dark:border-stone-800 shrink-0">
         <BotaoBarra icone={Sparkles} texto="Pré-Faturamento" onClick={() => setPre(true)} />
         <BotaoBarra icone={RefreshCw} texto="Atualizar" onClick={atualizar} carregando={carregando} />
-        <BotaoBarra icone={Printer} texto="Imprimir NF" onClick={exigirNota(imprimir)} carregando={ocupado === 'imprimir'} />
         <BotaoBarra icone={Barcode} texto="Gerar Boleto" onClick={exigirNota(gerarBoleto)} carregando={ocupado === 'boleto'} />
+        <BotaoBarra icone={Printer} texto="Imprimir NF" onClick={exigirNota(imprimir)} carregando={ocupado === 'imprimir'} />
         <BotaoBarra icone={Mail} texto="Enviar por Email" onClick={exigirNota(enviarEmail)} carregando={ocupado === 'email'} />
-        <BotaoBarra icone={FileDown} texto="Gerar Remessa" onClick={exigirNota(remessa)} carregando={ocupado === 'remessa'} titulo="Remessa CNAB 240 das notas da lista, do banco da nota escolhida" />
-        <BotaoBarra icone={ListChecks} texto="Listar Tudo" onClick={listarTudo} ativo={tudo} titulo="Todas as notas da empresa" />
-        <div className="relative">
-          <BotaoBarra icone={ChevronDown} texto="Opções" onClick={() => setOpcoesAberto((v) => !v)} />
-          {opcoesAberto && (
-            <>
-              <div className="fixed inset-0 z-20" onClick={() => setOpcoesAberto(false)} />
-              <div className="absolute z-30 mt-1 min-w-48 py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-xl">
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer"
-                  onClick={() => {
-                    setOpcoesAberto(false);
-                    exigirNota((n) => setConfirmar({ tipo: 'limpar', nota: n }))();
-                  }}
-                >
-                  <Eraser className="w-4 h-4 text-blue-600" /> Limpar Dados Boleto
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <MaisAcoes
+          itens={[
+            { icone: FileDown, titulo: ocupado === 'remessa' ? 'Gerando remessa…' : 'Gerar Remessa', onClick: exigirNota(remessa), disabled: ocupado === 'remessa' },
+            { icone: ListChecks, titulo: tudo ? 'Listar Tudo (ativo)' : 'Listar Tudo', onClick: listarTudo },
+            { icone: Eraser, titulo: 'Limpar Dados Boleto', onClick: exigirNota((n) => setConfirmar({ tipo: 'limpar', nota: n })), separar: true },
+          ]}
+        />
       </div>
 
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} className="mx-4 mt-3 shrink-0" />}
@@ -326,6 +352,8 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
         <div className="w-72 shrink-0 flex flex-col min-h-0 border-r border-stone-200 dark:border-stone-800">
           <TituloPainel>Faturamentos</TituloPainel>
           <Grade
+            nome="faturamento.lotes"
+            onToast={onToast}
             colunas={[
               { chave: 'id', titulo: 'ID', alinhar: 'dir' },
               { chave: 'data_fatur', titulo: 'Data', alinhar: 'centro', render: (r) => data(r.data_fatur) },
@@ -357,12 +385,14 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
             vazio="Nenhum faturamento."
           />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        <div ref={divisaoRef} className="flex-1 min-w-0 flex flex-col min-h-0">
           <div className="flex-1 flex flex-col min-h-0">
             <TituloPainel direita={<span className="text-[11px] text-stone-500">{tudo ? 'Todas as notas da empresa' : fatur ? `Faturamento ${fatur.id}${fatur.obs ? ` — ${fatur.obs}` : ''}` : ''}</span>}>
               Notas ({notas.length})
             </TituloPainel>
             <Grade
+              nome="faturamento.notas"
+              onToast={onToast}
               colunas={colunasNotas}
               linhas={notas}
               selecionado={nota?.id}
@@ -373,18 +403,29 @@ export const TelaFaturamento: React.FC<TelaProps> = ({ onToast, refreshToken }) 
               vazio={fatur || tudo ? 'Nenhuma nota.' : 'Escolha um faturamento.'}
             />
           </div>
-          <div className="h-56 shrink-0 flex flex-col min-h-0 border-t border-stone-200 dark:border-stone-800">
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Divisão entre notas e produtos"
+            tabIndex={0}
+            title="Arraste para mudar a altura dos produtos da nota"
+            onPointerDown={arrastarDivisao}
+            onKeyDown={(e) => (e.key === 'ArrowUp' ? ajustarProdutos(altProdutos + 24) : e.key === 'ArrowDown' ? ajustarProdutos(altProdutos - 24) : null)}
+            className="h-1.5 shrink-0 cursor-row-resize border-t border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-900 hover:bg-blue-400/60 focus:bg-blue-400/60 outline-none"
+          />
+          <div style={{ height: altProdutos, maxHeight: `calc(100% - ${MIN_NOTAS}px)`, minHeight: MIN_PRODUTOS }} className="shrink-0 flex flex-col min-h-0">
             <TituloPainel>
               <FileText className="w-3 h-3 inline mr-1" />
               Produtos da Nota {nota ? `${nota.serie}/${nota.numero}` : ''}
             </TituloPainel>
-            <Grade colunas={colunasProdutos} linhas={produtos} vazio="Nenhum produto." />
+            <Grade nome="faturamento.produtos" onToast={onToast} colunas={colunasProdutos} linhas={produtos} vazio="Nenhum produto." />
           </div>
         </div>
       </div>
 
       {pre && (
         <PreFaturamento
+          onToast={onToast}
           clientes={opcoes?.clientes ?? []}
           onFechar={() => setPre(false)}
           onGravado={(qtd) => {

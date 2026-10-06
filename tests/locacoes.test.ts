@@ -3,6 +3,7 @@ import {
   acertarGrupo,
   arredonda,
   calcularLeitura,
+  contadoresDaColeta,
   contadoresALancar,
   derivarValoresContrato,
   recalcularLeitura,
@@ -152,5 +153,20 @@ describe('Lançar pré-leituras', () => {
   it('mono lança só P&B; contrato colorido sem contador colorido não lança', () => {
     expect(contadoresALancar({ ...item, leitura_color: 0 }, ['N', 'S'])).toEqual([{ color: 'N', anterior: 4000, atual: 5000 }]);
     expect(contadoresALancar({ ...item, leitura_color: 0 }, ['S'])).toEqual([]);
+  });
+});
+
+describe('contadoresDaColeta (Scan Impressoras SNMP)', () => {
+  it('monocromática usa o contador de vida, mesmo com split preto/cor errado (Brother)', () => {
+    expect(contadoresDaColeta({ paginas: 274185, paginas_preto: 5, paginas_color: 5, colorida: 0 })).toEqual({ pb: 274185, cor: 0 });
+  });
+  it('colorida separa preto e cor', () => {
+    expect(contadoresDaColeta({ paginas: 1500, paginas_preto: 1000, paginas_color: 500, colorida: 1 })).toEqual({ pb: 1000, cor: 500 });
+  });
+  it('colorida sem split: total como P&B', () => {
+    expect(contadoresDaColeta({ paginas: 1500, paginas_preto: null, paginas_color: null, colorida: 1 })).toEqual({ pb: 1500, cor: 0 });
+  });
+  it('sem contador exposto: zero', () => {
+    expect(contadoresDaColeta({ paginas: null, colorida: 0 })).toEqual({ pb: 0, cor: 0 });
   });
 });

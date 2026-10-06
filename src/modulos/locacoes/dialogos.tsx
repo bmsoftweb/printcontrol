@@ -55,6 +55,13 @@ export const Agrupamento: React.FC<{ codigoInicial: string; onFechar: () => void
     { titulo: 'Valor Original Total Exced.', alinhar: 'd', render: (r) => moeda(r.valor_copia_total_excedente_original) },
   ];
   const t = dados?.total;
+  const colTotal: Coluna<RegistroCrud>[] = [
+    { titulo: 'G', campo: 'codigo_grupo', alinhar: 'c' },
+    { titulo: 'Total Mês', alinhar: 'd', render: (r) => inteiro(r.nr_copias_mes) },
+    { titulo: 'Total Contrato', alinhar: 'd', render: (r) => inteiro(r.nr_copias_contrato) },
+    { titulo: 'Total R$ Mês', alinhar: 'd', render: (r) => moeda(r.valor_total_geral) },
+    { titulo: 'Total R$ Contrato', alinhar: 'd', render: (r) => moeda(r.valor_contrato) },
+  ];
 
   return (
     <Janela
@@ -79,31 +86,19 @@ export const Agrupamento: React.FC<{ codigoInicial: string; onFechar: () => void
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} />}
       <div className="text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">Leituras do Grupo</div>
       <div className="flex flex-col h-[45vh] border border-stone-200 dark:border-stone-800 rounded-lg">
-        <Grade colunas={colunas} linhas={dados?.leituras ?? []} carregando={carregando} vazio="Gere o grupo para ver as leituras a faturar." compacta />
+        <Grade nome="locacoes.agrupamento" colunas={colunas} linhas={dados?.leituras ?? []} carregando={carregando} vazio="Gere o grupo para ver as leituras a faturar." onToast={onToast} />
       </div>
       <div className="text-xs font-semibold text-stone-600 dark:text-stone-300 mt-3 mb-1">Totalização do Grupo</div>
-      <table className="text-xs border border-stone-200 dark:border-stone-800 rounded-lg">
-        <thead>
-          <tr className="bg-stone-50 dark:bg-stone-950 text-stone-600 dark:text-stone-300">
-            {['G', 'Total Mês', 'Total Contrato', 'Total R$ Mês', 'Total R$ Contrato'].map((h) => (
-              <th key={h} className="px-3 py-1.5 font-semibold text-right first:text-center">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {t && (
-            <tr>
-              <td className="px-3 py-1.5 text-center">{t.codigo_grupo}</td>
-              <td className="px-3 py-1.5 text-right">{inteiro(t.nr_copias_mes)}</td>
-              <td className="px-3 py-1.5 text-right">{inteiro(t.nr_copias_contrato)}</td>
-              <td className="px-3 py-1.5 text-right">{moeda(t.valor_total_geral)}</td>
-              <td className="px-3 py-1.5 text-right">{moeda(t.valor_contrato)}</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <div className="flex flex-col h-[92px] border border-stone-200 dark:border-stone-800 rounded-lg">
+        <Grade
+          nome="locacoes.agrupamentoTotal"
+          chave="codigo_grupo"
+          colunas={colTotal}
+          linhas={t ? [t] : []}
+          vazio="Sem totais."
+          onToast={onToast}
+        />
+      </div>
       {confirmando && (
         <ConfirmDialog
           titulo="Confirma acertar os valores das leituras?"
@@ -131,7 +126,7 @@ export const Agrupamento: React.FC<{ codigoInicial: string; onFechar: () => void
 // Conferência de Leituras
 // ---------------------------------------------------------------------------------------------
 
-export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato: number) => void }> = ({ onFechar, onIrPara }) => {
+export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato: number) => void; onToast?: (m: string) => void }> = ({ onFechar, onIrPara, onToast }) => {
   const [a, m] = hoje().split('-').map(Number);
   const [ano, setAno] = useState(a);
   const [mes, setMes] = useState(m);
@@ -165,7 +160,7 @@ export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato
   };
 
   const colunas: Coluna<RegistroCrud>[] = [
-    { titulo: '', alinhar: 'c', render: (r) => (r.id_conferencia ? <Selo texto="CONFERIDO" cor="#2E8B57" /> : '') },
+    { id: 'conferido', rotulo: 'Conferido', titulo: '', alinhar: 'c', render: (r) => (r.id_conferencia ? <Selo texto="CONFERIDO" cor="#2E8B57" /> : '') },
     { titulo: 'Nome', campo: 'nome' },
     { titulo: 'Nr. Série', campo: 'nr_serie' },
     { titulo: 'Id Equip.', campo: 'id_equip', alinhar: 'c' },
@@ -224,6 +219,7 @@ export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato
       <div className="text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">Leituras não Realizadas</div>
       <div className="flex flex-col h-[50vh] border border-stone-200 dark:border-stone-800 rounded-lg">
         <Grade
+          nome="locacoes.conferencia"
           colunas={colunas}
           linhas={linhas ?? []}
           selecionada={selId ?? undefined}
@@ -231,7 +227,7 @@ export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato
           onDuploClique={(r) => onIrPara(r.id)}
           carregando={ocupado}
           vazio={linhas ? 'Todas as leituras do dia foram feitas.' : 'Escolha o mês e o dia e clique em Conferir.'}
-          compacta
+          onToast={onToast}
         />
       </div>
       {desmarcar && sel && (
@@ -254,7 +250,10 @@ export const Conferencia: React.FC<{ onFechar: () => void; onIrPara: (idContrato
 // Leituras automáticas (histórico SNMP)
 // ---------------------------------------------------------------------------------------------
 
-export const HistoricoSnmp: React.FC<{ nrSerie: string; onFechar: () => void }> = ({ nrSerie, onFechar }) => {
+/** Nível de toner em % (vazio quando a impressora não informa) */
+const pct = (v: unknown) => (v === null || v === undefined || v === '' ? '' : `${v}%`);
+
+export const HistoricoSnmp: React.FC<{ nrSerie: string; onFechar: () => void; onToast?: (m: string) => void }> = ({ nrSerie, onFechar, onToast }) => {
   const [serie, setSerie] = useState(nrSerie);
   const [linhas, setLinhas] = useState<RegistroCrud[]>([]);
   const [pos, setPos] = useState(-1);
@@ -282,13 +281,12 @@ export const HistoricoSnmp: React.FC<{ nrSerie: string; onFechar: () => void }> 
     { titulo: 'Cliente', campo: 'cliente_nome' },
     { titulo: 'P/B', alinhar: 'd', render: (r) => <span className="font-bold text-blue-700 dark:text-blue-400">{inteiro(r.leitura_pb)}</span> },
     { titulo: 'Color', alinhar: 'd', render: (r) => inteiro(r.leitura_color) },
-    { titulo: 'Black', campo: 'nivel_toner_black', alinhar: 'c' },
-    { titulo: 'Cyan', campo: 'nivel_toner_cyan', alinhar: 'c' },
-    { titulo: 'Magenta', campo: 'nivel_toner_magenta', alinhar: 'c' },
-    { titulo: 'Yellow', campo: 'nivel_toner_yellow', alinhar: 'c' },
-    { titulo: 'Fusor', campo: 'nivel_fusor', alinhar: 'c' },
+    { titulo: 'Unidade', campo: 'unidade', alinhar: 'c' },
+    { titulo: 'Black', alinhar: 'c', render: (r) => pct(r.nivel_toner_black) },
+    { titulo: 'Cyan', alinhar: 'c', render: (r) => pct(r.nivel_toner_cyan) },
+    { titulo: 'Magenta', alinhar: 'c', render: (r) => pct(r.nivel_toner_magenta) },
+    { titulo: 'Yellow', alinhar: 'c', render: (r) => pct(r.nivel_toner_yellow) },
     { titulo: 'IP', campo: 'cliente_ip_equip' },
-    { titulo: 'Lançado', alinhar: 'c', render: (r) => (r.lancado === 'S' ? <Selo texto="SIM" /> : '') },
   ];
   const ir = (p: number) => setPos(Math.max(0, Math.min(linhas.length - 1, p)));
   const nav = 'p-2 rounded-lg border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 cursor-pointer disabled:opacity-40 h-[38px]';
@@ -296,7 +294,7 @@ export const HistoricoSnmp: React.FC<{ nrSerie: string; onFechar: () => void }> 
   return (
     <Janela
       titulo="Leituras"
-      subtitulo={serie ? `Leituras automáticas (SNMP) do equipamento ${serie}` : 'Todas as leituras automáticas dos equipamentos do grupo (as 2.000 mais recentes)'}
+      subtitulo={serie ? `Coletas do Scan Impressoras (SNMP) do equipamento ${serie}` : 'Todas as coletas do Scan Impressoras dos equipamentos do grupo (as 2.000 mais recentes)'}
       onFechar={onFechar}
       largura="max-w-[95vw]"
       rodape={
@@ -321,14 +319,15 @@ export const HistoricoSnmp: React.FC<{ nrSerie: string; onFechar: () => void }> 
       {erro && <AvisoErro mensagem={erro} onFechar={() => setErro(null)} />}
       <div className="flex flex-col h-[60vh] border border-stone-200 dark:border-stone-800 rounded-lg">
         <Grade
+          nome="locacoes.snmp"
           colunas={colunas}
           linhas={linhas}
           selecionada={linhas[pos]?.id}
           onSelecionar={(r) => setPos(linhas.indexOf(r))}
           carregando={carregando}
           vazio="Nenhuma leitura automática."
-          compacta
           rolarParaSelecionada
+          onToast={onToast}
         />
       </div>
     </Janela>

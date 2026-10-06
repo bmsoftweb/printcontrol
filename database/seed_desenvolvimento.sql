@@ -1,0 +1,81 @@
+-- Dados mínimos para desenvolvimento no printcontrol_xdemo (gerado em 2026-10-05).
+-- Tabelas de referência copiadas do printcontrol antigo; grupo, empresas e usuários fictícios.
+-- Login de teste: admin@printcontrol.test / senha abaixo (técnico: tecnico@printcontrol.test, mesma senha)
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM `usuarios_niveis`;
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('A','A','ADM');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('C','C','COMPRAS');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('F','C','FINANCEIRO');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('O','E','CONSULTA');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('S','B','SUPERVISOR');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('V','D','VENDEDOR');
+INSERT INTO `usuarios_niveis` (`id`,`nivel`,`descricao`) VALUES ('Z','Z','TODOS');
+DELETE FROM `fatur_planos`;
+INSERT INTO `fatur_planos` (`id`,`id_grupo`,`descricao`,`modelo_nf`) VALUES ('BO',1,'BOLETO','nf_modelo1');
+INSERT INTO `fatur_planos` (`id`,`id_grupo`,`descricao`,`modelo_nf`) VALUES ('CX',1,'CAIXA','nf_modelo2');
+INSERT INTO `fatur_planos` (`id`,`id_grupo`,`descricao`,`modelo_nf`) VALUES ('DEP',1,'DEPOSITO','nf_modelo2');
+INSERT INTO `fatur_planos` (`id`,`id_grupo`,`descricao`,`modelo_nf`) VALUES ('PIX',1,'PIX','nf_modelo2');
+DELETE FROM `fatur_series`;
+INSERT INTO `fatur_series` (`id`,`id_grupo`,`id_empresa`,`descricao`,`ultima_nota`,`modelo_nf`) VALUES ('01',1,1,'SERIE 01',15274,'nf_modelo1');
+INSERT INTO `fatur_series` (`id`,`id_grupo`,`id_empresa`,`descricao`,`ultima_nota`,`modelo_nf`) VALUES ('01',1,2,'SERIE 01',10511,'nf_modelo2');
+INSERT INTO `fatur_series` (`id`,`id_grupo`,`id_empresa`,`descricao`,`ultima_nota`,`modelo_nf`) VALUES ('99',1,1,'SERIE 99',161,'nf_modelo2');
+INSERT INTO `fatur_series` (`id`,`id_grupo`,`id_empresa`,`descricao`,`ultima_nota`,`modelo_nf`) VALUES ('99',1,2,'SERIE 99',6,'nf_modelo2');
+DELETE FROM `config`;
+INSERT INTO `config` (`id`,`id_grupo`,`id_empresa`,`areceber_juros_mes`,`areceber_multa`,`id_cartucho`,`formato_void`) VALUES (1,1,1,'6.000','3.000',0,NULL);
+INSERT INTO `config` (`id`,`id_grupo`,`id_empresa`,`areceber_juros_mes`,`areceber_multa`,`id_cartucho`,`formato_void`) VALUES (2,1,2,'6.000','3.000',0,NULL);
+DELETE FROM `equipamentos_marcas`;
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (1,1,'HP');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (2,1,'EPSON');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (3,1,'BROTHER');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (4,1,'KYOCERA');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (5,1,'CANON');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (7,1,'RICOH');
+INSERT INTO `equipamentos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (8,1,'PANTUM');
+DELETE FROM `equipamentos_tipos`;
+INSERT INTO `equipamentos_tipos` (`id`,`id_grupo`,`descricao`) VALUES (1,1,'IMPRESSORA');
+DELETE FROM `produtos_familias`;
+INSERT INTO `produtos_familias` (`id`,`id_grupo`,`descricao`) VALUES (7,1,'CARTUCHOS');
+INSERT INTO `produtos_familias` (`id`,`id_grupo`,`descricao`) VALUES (8,1,'CILINDROS');
+INSERT INTO `produtos_familias` (`id`,`id_grupo`,`descricao`) VALUES (9,1,'SERVIÇO DE MANUTENÇÃO ');
+INSERT INTO `produtos_familias` (`id`,`id_grupo`,`descricao`) VALUES (10,1,'LIMPEZA ');
+DELETE FROM `produtos_grupos`;
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (7,1,7,0,'PANTUM 7100 - 7105 - 3305 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (8,1,7,0,'PANTUM 5100',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (9,1,7,0,'HP 1212- 1132 - 1102',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (10,1,7,0,'HP 125 - 127',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (11,1,7,0,'BROTHER 2540 - 2720 - 2700 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (12,1,7,0,'BROTHER 1610',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (13,1,7,0,'BROTHER 5652 - 5902',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (14,1,7,0,'CANON 1643',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (15,1,7,0,'BROTHER 7860 - 7065 - 7460 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (16,1,7,0,'BROTHER 2570 - 2750',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (17,1,7,0,'HP 135 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (19,1,7,0,'BROTHER 820 - RICOH 3778',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (20,1,7,0,' RICOH 3710 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (21,1,7,0,'BROTHER 8080 - 8480',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (22,1,7,0,'PANTUM 6559',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (23,1,7,0,'BROTHER 8360 - 8900 ',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (24,1,7,0,'HP 252 - 254',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (25,1,7,0,'HP 176',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (26,1,7,0,'BROTHER 3551',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (27,1,7,0,'BROTHER 5512',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (28,1,7,0,'BROTHER 4500',NULL);
+INSERT INTO `produtos_grupos` (`id`,`id_grupo`,`id_familia`,`id_produtos_grupos`,`descricao`,`cor`) VALUES (29,1,7,0,'EPSON ECOTANK 6490 - 3150 - 4260 - 6191 - 5190',NULL);
+DELETE FROM `produtos_marcas`;
+INSERT INTO `produtos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (1,1,'ARES');
+INSERT INTO `produtos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (2,1,'BYQUALY ');
+INSERT INTO `produtos_marcas` (`id`,`id_grupo`,`descricao`) VALUES (3,1,'KATUN ');
+DELETE FROM empresas_grupos; INSERT INTO empresas_grupos (id, apelido, nome) VALUES (1, 'DEMO', 'GRUPO DEMONSTRAÇÃO');
+DELETE FROM empresas_filiais;
+INSERT INTO empresas_filiais (id, id_grupo, apelido, nome_comercial, razao_social, endereco, numero, bairro, cep, cidade, cod_cidade, uf, cnpj, ie, simples_normal, nfe_ambiente, email_financeiro)
+VALUES (1, 1, 'MATRIZ', 'PRINT DEMO MATRIZ', 'PRINT DEMO LOCACAO LTDA', 'RUA DAS FLORES', '100', 'CENTRO', '88010000', 'FLORIANOPOLIS', '4205407', 'SC', '11222333000181', 'ISENTO', 'S', 'H', 'financeiro@printcontrol.test'),
+       (2, 1, 'FILIAL', 'PRINT DEMO FILIAL', 'PRINT DEMO FILIAL LTDA', 'AV BRASIL', '200', 'CENTRO', '88300000', 'ITAJAI', '4208203', 'SC', '11222333000262', 'ISENTO', 'S', 'H', 'filial@printcontrol.test');
+DELETE FROM usuarios;
+INSERT INTO usuarios (id, id_grupo, apelido, nome, email, senha, nivel, ativo) VALUES
+  (1, 1, 'ADMIN', 'ADMINISTRADOR', 'admin@printcontrol.test', 'devc0cd2285', 'A', 'S'),
+  (2, 1, 'TECNICO', 'TECNICO', 'tecnico@printcontrol.test', 'devc0cd2285', 'T', 'S');
+DELETE FROM empresas_usuarios; INSERT INTO empresas_usuarios (id_empresa, id_usuario) VALUES (1, 1), (2, 1), (1, 2);
+DELETE FROM bancos; INSERT INTO bancos (id, id_grupo, apelido, nome, emite_boleto) VALUES (1, 1, 'CAIXA', 'CAIXA (DINHEIRO)', 'N');
+INSERT INTO usuarios_niveis (id, nivel, descricao) VALUES ('T', 'T', 'TECNICO');
+DELETE FROM os_tipos; INSERT INTO os_tipos (id, descricao) VALUES ('C','CONTRATO'),('D','DEVOLUCAO'),('E','ENTREGA'),('F','FATURADO'),('G','RECARGA'),('R','REQUISICAO'),('S','SERVICO');
+SET FOREIGN_KEY_CHECKS = 1;
